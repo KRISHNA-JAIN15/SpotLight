@@ -364,4 +364,58 @@ eventSchema.methods.updateTicketAvailability = function () {
   return this.save();
 };
 
+// Pre-save validation hook
+eventSchema.pre("save", function (next) {
+  // Validate ticket quantities don't exceed total capacity
+  if (
+    !this.pricing.isFree &&
+    this.pricing.tickets &&
+    this.pricing.tickets.length > 0
+  ) {
+    const totalTicketQuantity = this.pricing.tickets.reduce(
+      (total, ticket) => total + (ticket.quantity.total || 0),
+      0
+    );
+
+    if (totalTicketQuantity > this.pricing.totalCapacity) {
+      return next(
+        new Error(
+          `Total ticket quantity (${totalTicketQuantity}) exceeds maximum event capacity (${this.pricing.totalCapacity})`
+        )
+      );
+    }
+
+    // Ensure all tickets have required fields
+    for (const ticket of this.pricing.tickets) {
+      if (
+        !ticket.type ||
+        ticket.price === undefined ||
+        !ticket.quantity.total
+      ) {
+        return next(
+          new Error("All ticket types must have a name, price, and quantity")
+        );
+      }
+
+      if (ticket.price < 0) {
+        return next(new Error("Ticket prices cannot be negative"));
+      }
+
+      if (ticket.quantity.total < 1) {
+        return next(new Error("Ticket quantity must be at least 1"));
+      }
+    }
+  }
+
+  // Auto-calculate available tickets
+  if (this.pricing.tickets) {
+    this.pricing.tickets.forEach((ticket) => {
+      if (!ticket.quantity.sold) ticket.quantity.sold = 0;
+      ticket.quantity.available = ticket.quantity.total - ticket.quantity.sold;
+    });
+  }
+
+  next();
+});
+
 module.exports = mongoose.model("Event", eventSchema);

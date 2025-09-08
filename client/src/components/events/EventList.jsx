@@ -42,7 +42,24 @@ const EventList = () => {
           },
         }
       );
-      setEvents(response.data.data.events);
+
+      // Ensure we have a valid array of events
+      const eventData = response.data.data.events || [];
+      setEvents(eventData);
+
+      // Debug: Check if any events have missing dateTime
+      const eventsWithMissingDateTime = eventData.filter(
+        (event) =>
+          !event.dateTime ||
+          !event.dateTime.startDate ||
+          !event.dateTime.endDate
+      );
+      if (eventsWithMissingDateTime.length > 0) {
+        console.warn(
+          "Events with missing dateTime detected:",
+          eventsWithMissingDateTime
+        );
+      }
     } catch (error) {
       console.error("Error fetching events:", error);
       setError(error.response?.data?.message || "Failed to fetch events");
@@ -103,6 +120,45 @@ const EventList = () => {
   };
 
   const getStatusBadge = (status, event) => {
+    // Check if event and dateTime exist to prevent errors
+    if (
+      !event ||
+      !event.dateTime ||
+      !event.dateTime.startDate ||
+      !event.dateTime.endDate
+    ) {
+      // Return a default status badge if dateTime is missing
+      const statusConfig = {
+        upcoming: {
+          color: "bg-blue-100 text-blue-800",
+          icon: Calendar,
+          text: "Upcoming",
+        },
+        cancelled: {
+          color: "bg-red-100 text-red-800",
+          icon: XCircle,
+          text: "Cancelled",
+        },
+        postponed: {
+          color: "bg-yellow-100 text-yellow-800",
+          icon: Clock,
+          text: "Postponed",
+        },
+      };
+
+      const config = statusConfig[status] || statusConfig.upcoming;
+      const Icon = config.icon;
+
+      return (
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}
+        >
+          <Icon className="w-3 h-3 mr-1" />
+          {config.text}
+        </span>
+      );
+    }
+
     // Calculate the actual status based on current time and event dates
     const now = new Date();
     const startDate = new Date(event.dateTime.startDate);
@@ -163,6 +219,9 @@ const EventList = () => {
   };
 
   const formatDate = (dateString) => {
+    if (!dateString) {
+      return "Date TBD";
+    }
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -221,7 +280,7 @@ const EventList = () => {
       </div>
 
       {/* Events List */}
-      {events.length === 0 ? (
+      {!events || events.length === 0 ? (
         <div className="text-center py-12">
           <Calendar className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-lg font-medium text-gray-900">
@@ -239,183 +298,185 @@ const EventList = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {events.map((event) => (
-            <div
-              key={event._id}
-              className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden "
-            >
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold text-gray-900">
-                        {event.title}
-                      </h3>
-                      {getStatusBadge(event.status, event)}
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {event.pricing?.isFree ? "Free" : "Paid"}
-                      </span>
+          {events
+            .filter((event) => event && event._id) // Filter out any invalid events
+            .map((event) => (
+              <div
+                key={event._id}
+                className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden "
+              >
+                <div className="p-5">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-xl font-semibold text-gray-900">
+                          {event.title}
+                        </h3>
+                        {getStatusBadge(event.status, event)}
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {event.pricing?.isFree ? "Free" : "Paid"}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 mb-2">{event.description}</p>
+                      <div className="flex items-center text-sm text-gray-500 space-x-4">
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-1" />
+                          {formatDate(event.dateTime?.startDate)}
+                        </div>
+                        <div className="flex items-center">
+                          <MapPin className="h-4 w-4 mr-1" />
+                          {event.venue?.name || "Venue TBD"}
+                        </div>
+                        <div className="flex items-center">
+                          <Users className="h-4 w-4 mr-1" />
+                          {event.attendees?.length || 0}/
+                          {event.pricing?.totalCapacity}
+                        </div>
+                        {!event.pricing?.isFree &&
+                          event.pricing?.tickets?.[0]?.price && (
+                            <div className="flex items-center">
+                              <DollarSign className="h-4 w-4 mr-1" />
+                              From ₹{event.pricing.tickets[0].price}
+                            </div>
+                          )}
+                      </div>
                     </div>
-                    <p className="text-gray-600 mb-2">{event.description}</p>
-                    <div className="flex items-center text-sm text-gray-500 space-x-4">
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {formatDate(event.dateTime?.startDate)}
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {event.venue?.name || "Venue TBD"}
-                      </div>
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1" />
-                        {event.attendees?.length || 0}/
-                        {event.pricing?.totalCapacity}
-                      </div>
-                      {!event.pricing?.isFree &&
-                        event.pricing?.tickets?.[0]?.price && (
-                          <div className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            From ₹{event.pricing.tickets[0].price}
-                          </div>
-                        )}
-                    </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Link
-                      to={`/events/${event._id}`}
-                      className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Link>
-                    {isEventUpcoming(event.dateTime?.startDate) &&
-                      event.status === "upcoming" && (
-                        <Link
-                          to={`/edit-event/${event._id}`}
-                          className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Link>
-                      )}
-                    {event.status === "upcoming" && (
-                      <button
-                        onClick={() => handleCancelEvent(event._id)}
-                        className="p-2 text-gray-600 hover:text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
+                    {/* Actions */}
+                    <div className="flex items-center space-x-2 ml-4">
+                      <Link
+                        to={`/events/${event._id}`}
+                        className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
                       >
-                        <PauseCircle className="h-4 w-4" />
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      {isEventUpcoming(event.dateTime?.startDate) &&
+                        event.status === "upcoming" && (
+                          <Link
+                            to={`/edit-event/${event._id}`}
+                            className="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Link>
+                        )}
+                      {event.status === "upcoming" && (
+                        <button
+                          onClick={() => handleCancelEvent(event._id)}
+                          className="p-2 text-gray-600 hover:text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
+                        >
+                          <PauseCircle className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteEvent(event._id)}
+                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteEvent(event._id)}
-                      className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Additional Info */}
-                <div className="border-t border-gray-200 pt-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-700">
-                        Category:
-                      </span>
-                      <div className="text-gray-600 capitalize">
-                        {event.category}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">
-                        Duration:
-                      </span>
-                      <div className="text-gray-600">
-                        {formatDate(event.dateTime?.startDate)} -{" "}
-                        {formatDate(event.dateTime?.endDate)}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">
-                        Created:
-                      </span>
-                      <div className="text-gray-600">
-                        {new Date(event.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-700">
-                        Registration:
-                      </span>
-                      <div className="text-gray-600">
-                        {event.attendees?.length || 0} registered
-                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Venue Info */}
-                {event.venue && (
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <div className="flex items-center justify-between">
+                  {/* Additional Info */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <span className="font-medium text-gray-700">
-                          Venue:
+                          Category:
                         </span>
-                        <div className="text-gray-600">
-                          {event.venue.name} - {event.venue.address?.city},{" "}
-                          {event.venue.address?.state}
+                        <div className="text-gray-600 capitalize">
+                          {event.category}
                         </div>
                       </div>
-                      <Link
-                        to={`/venues/${event.venue._id}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm bg-blue-300 rounded-md px-2 py-2 "
-                      >
-                        View Venue →
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tags */}
-                {event.tags && event.tags.length > 0 && (
-                  <div className="border-t border-gray-200 pt-4 mt-4">
-                    <span className="font-medium text-gray-700 block mb-2">
-                      Tags:
-                    </span>
-                    <div className="flex flex-wrap gap-2">
-                      {event.tags.map((tag, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                        >
-                          {tag}
+                      <div>
+                        <span className="font-medium text-gray-700">
+                          Duration:
                         </span>
-                      ))}
+                        <div className="text-gray-600">
+                          {formatDate(event.dateTime?.startDate)} -{" "}
+                          {formatDate(event.dateTime?.endDate)}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">
+                          Created:
+                        </span>
+                        <div className="text-gray-600">
+                          {new Date(event.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">
+                          Registration:
+                        </span>
+                        <div className="text-gray-600">
+                          {event.attendees?.length || 0} registered
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {/* Pricing Details for Paid Events */}
-                {!event.pricing?.isFree &&
-                  event.pricing?.tickets &&
-                  event.pricing.tickets.length > 0 && (
+                  {/* Venue Info */}
+                  {event.venue && (
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-medium text-gray-700">
+                            Venue:
+                          </span>
+                          <div className="text-gray-600">
+                            {event.venue.name} - {event.venue.address?.city},{" "}
+                            {event.venue.address?.state}
+                          </div>
+                        </div>
+                        <Link
+                          to={`/venues/${event.venue._id}`}
+                          className="text-blue-600 hover:text-blue-800 text-sm bg-blue-300 rounded-md px-2 py-2 "
+                        >
+                          View Venue →
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {event.tags && event.tags.length > 0 && (
                     <div className="border-t border-gray-200 pt-4 mt-4">
                       <span className="font-medium text-gray-700 block mb-2">
-                        Pricing:
+                        Tags:
                       </span>
-                      <div className="flex flex-wrap gap-4 text-sm">
-                        {event.pricing.tickets.map((ticket, index) => (
-                          <span key={index} className="text-gray-600">
-                            {ticket.type}: ₹{ticket.price}
+                      <div className="flex flex-wrap gap-2">
+                        {event.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
+                          >
+                            {tag}
                           </span>
                         ))}
                       </div>
                     </div>
                   )}
+
+                  {/* Pricing Details for Paid Events */}
+                  {!event.pricing?.isFree &&
+                    event.pricing?.tickets &&
+                    event.pricing.tickets.length > 0 && (
+                      <div className="border-t border-gray-200 pt-4 mt-4">
+                        <span className="font-medium text-gray-700 block mb-2">
+                          Pricing:
+                        </span>
+                        <div className="flex flex-wrap gap-4 text-sm">
+                          {event.pricing.tickets.map((ticket, index) => (
+                            <span key={index} className="text-gray-600">
+                              {ticket.type}: ₹{ticket.price}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
     </div>

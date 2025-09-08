@@ -2,7 +2,16 @@ import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
-import { Calendar, MapPin, Upload, X, DollarSign, Users } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Upload,
+  X,
+  DollarSign,
+  Users,
+  Plus,
+  Minus,
+} from "lucide-react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import CloudinaryUpload from "../CloudinaryUpload";
@@ -68,6 +77,18 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
   const [newTag, setNewTag] = useState("");
   const [venuesLoading, setVenuesLoading] = useState(true);
 
+  // State for managing ticket tiers
+  const [ticketTiers, setTicketTiers] = useState([
+    {
+      id: 1,
+      type: "General",
+      price: "",
+      quantity: "",
+      description: "",
+      isActive: true,
+    },
+  ]);
+
   const {
     register,
     handleSubmit,
@@ -91,9 +112,6 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
       maxAttendees: "",
       contactEmail: "",
       contactPhone: "",
-      "pricing.general": "",
-      "pricing.vip": "",
-      "pricing.premium": "",
     },
   });
 
@@ -103,6 +121,24 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
   useEffect(() => {
     fetchApprovedVenues();
   }, []);
+
+  // Reset ticket tiers when event type changes
+  useEffect(() => {
+    if (eventType === "paid" && ticketTiers.length === 0) {
+      setTicketTiers([
+        {
+          id: 1,
+          type: "General",
+          price: "",
+          quantity: "",
+          description: "",
+          isActive: true,
+        },
+      ]);
+    } else if (eventType === "free") {
+      setTicketTiers([]);
+    }
+  }, [eventType]);
 
   // Populate form with initial data when editing
   useEffect(() => {
@@ -129,10 +165,44 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
           // Handle pricing data and capacity
           setValue("type", eventData.pricing.isFree ? "free" : "paid");
           setValue("maxAttendees", eventData.pricing.totalCapacity);
-          if (!eventData.pricing.isFree && eventData.pricing.tickets) {
-            eventData.pricing.tickets.forEach((ticket) => {
-              setValue(`pricing.${ticket.type}`, ticket.price);
-            });
+
+          // Handle ticket tiers for paid events
+          if (!eventData.pricing.isFree) {
+            if (
+              eventData.pricing.tickets &&
+              eventData.pricing.tickets.length > 0
+            ) {
+              // Load existing ticket tiers
+              const formattedTiers = eventData.pricing.tickets.map(
+                (ticket, index) => ({
+                  id: index + 1,
+                  type: ticket.type,
+                  price: ticket.price.toString(),
+                  quantity: ticket.quantity.total.toString(),
+                  description: ticket.description || "",
+                  isActive: ticket.isActive !== false,
+                })
+              );
+              setTicketTiers(formattedTiers);
+            } else {
+              // For paid events with no existing tickets, create a default tier
+              console.log(
+                "Creating default tier for paid event with no tickets"
+              );
+              setTicketTiers([
+                {
+                  id: 1,
+                  type: "General",
+                  price: "",
+                  quantity: eventData.pricing.totalCapacity.toString(),
+                  description: "",
+                  isActive: true,
+                },
+              ]);
+            }
+          } else {
+            // Free event - no tiers needed
+            setTicketTiers([]);
           }
         } else if (key === "images") {
           // Handle images
@@ -233,6 +303,61 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
     setTags((prev) => prev.filter((t) => t !== tag));
   };
 
+  // Ticket tier management functions
+  const addTicketTier = () => {
+    const newId = Math.max(...ticketTiers.map((t) => t.id), 0) + 1;
+    setTicketTiers((prev) => [
+      ...prev,
+      {
+        id: newId,
+        type: "",
+        price: "",
+        quantity: "",
+        description: "",
+        isActive: true,
+      },
+    ]);
+  };
+
+  const removeTicketTier = (tierIdToRemove) => {
+    if (ticketTiers.length > 1) {
+      setTicketTiers((prev) =>
+        prev.filter((tier) => tier.id !== tierIdToRemove)
+      );
+    }
+  };
+
+  const updateTicketTier = (tierId, field, value) => {
+    setTicketTiers((prev) =>
+      prev.map((tier) =>
+        tier.id === tierId ? { ...tier, [field]: value } : tier
+      )
+    );
+  };
+
+  // Calculate total capacity from all ticket tiers
+  const calculateTotalCapacity = () => {
+    return ticketTiers.reduce((total, tier) => {
+      const quantity = parseInt(tier.quantity) || 0;
+      return total + quantity;
+    }, 0);
+  };
+
+  // Validate ticket tier quantities against max attendees
+  const validateTicketQuantities = (maxAttendees) => {
+    const totalTicketCapacity = calculateTotalCapacity();
+    const maxAttendeesNum = parseInt(maxAttendees) || 0;
+
+    if (totalTicketCapacity > maxAttendeesNum) {
+      return {
+        isValid: false,
+        message: `Total ticket quantity (${totalTicketCapacity}) exceeds maximum attendees (${maxAttendeesNum})`,
+      };
+    }
+
+    return { isValid: true };
+  };
+
   const getVenueCapacity = () => {
     const venue = venues.find((v) => v._id === selectedVenue);
     return venue?.capacity || null;
@@ -267,6 +392,31 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
       return;
     }
 
+    // Validate ticket quantities for paid events
+    if (data.type === "paid") {
+      const ticketValidation = validateTicketQuantities(data.maxAttendees);
+      if (!ticketValidation.isValid) {
+        toast.error(ticketValidation.message);
+        return;
+      }
+
+      // Check if at least one valid ticket tier exists
+      const validTiers = ticketTiers.filter(
+        (tier) =>
+          tier.type &&
+          tier.price &&
+          tier.quantity &&
+          parseInt(tier.quantity) > 0
+      );
+
+      if (validTiers.length === 0) {
+        toast.error(
+          "Please add at least one valid ticket tier with name, price, and quantity"
+        );
+        return;
+      }
+    }
+
     console.log("Current time:", new Date().toISOString());
     console.log("Start date as Date object:", startDate);
     console.log("Start date ISO:", startDate.toISOString());
@@ -279,20 +429,64 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
         caption: img.caption || "",
       }));
 
+    // Prepare pricing data based on event type
+    let pricingData;
+    let totalCapacity = parseInt(data.maxAttendees) || 0;
+
+    if (data.type === "free") {
+      pricingData = {
+        isFree: true,
+        tickets: [],
+        totalCapacity,
+        soldTickets: 0,
+        availableTickets: totalCapacity,
+      };
+    } else {
+      // For paid events, use ticket tiers
+      console.log("Processing ticket tiers:", ticketTiers);
+
+      const validTickets = ticketTiers
+        .filter((tier) => tier.type && tier.price && tier.quantity)
+        .map((tier) => ({
+          type: tier.type,
+          price: parseFloat(tier.price),
+          currency: "INR",
+          quantity: {
+            total: parseInt(tier.quantity),
+            sold: 0,
+            available: parseInt(tier.quantity),
+          },
+          description: tier.description || "",
+          isActive: tier.isActive,
+        }));
+
+      console.log("Valid tickets after processing:", validTickets);
+
+      // Calculate total capacity from ticket tiers
+      totalCapacity = validTickets.reduce(
+        (sum, ticket) => sum + ticket.quantity.total,
+        0
+      );
+
+      pricingData = {
+        isFree: false,
+        tickets: validTickets,
+        totalCapacity,
+        soldTickets: 0,
+        availableTickets: totalCapacity,
+      };
+    }
+
+    console.log("Final pricing data:", pricingData);
+    console.log("Ticket tiers state:", ticketTiers);
+
     const eventFormData = {
       ...data,
       dateTime: {
         startDate: data.startDate,
         endDate: data.endDate,
       },
-      pricing: {
-        general: data["pricing.general"] || 0,
-        vip: data["pricing.vip"] || 0,
-        premium: data["pricing.premium"] || 0,
-        isFree: data.type === "free",
-        totalCapacity: parseInt(data.maxAttendees) || 0,
-        availableTickets: parseInt(data.maxAttendees) || 0,
-      },
+      pricing: pricingData,
       tags,
       images: validImages,
     };
@@ -499,59 +693,212 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
 
         {/* Pricing - Only show if paid event */}
         {eventType === "paid" && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900 flex items-center">
-              <DollarSign className="h-5 w-5 mr-2" />
-              Ticket Pricing
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  General Admission
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <input
-                    type="number"
-                    step="0.01"
-                    {...register("pricing.general")}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                <DollarSign className="h-5 w-5 mr-2" />
+                Ticket Pricing & Tiers
+              </h3>
+              <button
+                type="button"
+                onClick={addTicketTier}
+                className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add Tier
+              </button>
+            </div>
+
+            {/* Dynamic Ticket Tiers */}
+            <div className="space-y-4">
+              {ticketTiers.map((tier, index) => (
+                <div
+                  key={tier.id}
+                  className="p-4 border border-gray-200 rounded-lg bg-gray-50"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">
+                      Ticket Tier {index + 1}
+                    </h4>
+                    {ticketTiers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeTicketTier(tier.id)}
+                        className="text-red-600 hover:text-red-800 transition-colors"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Tier Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tier Name *
+                      </label>
+                      <input
+                        type="text"
+                        value={tier.type}
+                        onChange={(e) =>
+                          updateTicketTier(tier.id, "type", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g., General, VIP, Premium"
+                      />
+                    </div>
+
+                    {/* Price */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Price (₹) *
+                      </label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={tier.price}
+                          onChange={(e) =>
+                            updateTicketTier(tier.id, "price", e.target.value)
+                          }
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quantity */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Quantity *
+                      </label>
+                      <div className="relative">
+                        <Users className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type="number"
+                          min="1"
+                          value={tier.quantity}
+                          onChange={(e) =>
+                            updateTicketTier(
+                              tier.id,
+                              "quantity",
+                              e.target.value
+                            )
+                          }
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="50"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Status Toggle */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Status
+                      </label>
+                      <div className="flex items-center pt-2">
+                        <input
+                          type="checkbox"
+                          checked={tier.isActive}
+                          onChange={(e) =>
+                            updateTicketTier(
+                              tier.id,
+                              "isActive",
+                              e.target.checked
+                            )
+                          }
+                          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label className="ml-2 text-sm text-gray-700">
+                          Active
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description (Optional)
+                    </label>
+                    <textarea
+                      value={tier.description}
+                      onChange={(e) =>
+                        updateTicketTier(tier.id, "description", e.target.value)
+                      }
+                      rows="2"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Describe what's included in this tier..."
+                    />
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Total Capacity Summary */}
+            <div
+              className={`p-4 rounded-lg ${
+                calculateTotalCapacity() > parseInt(watch("maxAttendees")) || 0
+                  ? "bg-red-50 border border-red-200"
+                  : "bg-blue-50"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span
+                  className={`text-sm font-medium ${
+                    calculateTotalCapacity() >
+                      parseInt(watch("maxAttendees")) || 0
+                      ? "text-red-900"
+                      : "text-blue-900"
+                  }`}
+                >
+                  Total Ticket Capacity:
+                </span>
+                <span
+                  className={`text-lg font-bold ${
+                    calculateTotalCapacity() >
+                      parseInt(watch("maxAttendees")) || 0
+                      ? "text-red-900"
+                      : "text-blue-900"
+                  }`}
+                >
+                  {calculateTotalCapacity()} people
+                </span>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  VIP (Optional)
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <input
-                    type="number"
-                    step="0.01"
-                    {...register("pricing.vip")}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
+              {/* Max Attendees Validation */}
+              {watch("maxAttendees") && (
+                <div
+                  className={`text-xs mt-1 ${
+                    calculateTotalCapacity() > parseInt(watch("maxAttendees"))
+                      ? "text-red-700"
+                      : "text-blue-700"
+                  }`}
+                >
+                  Maximum attendees set: {watch("maxAttendees")} people
+                  {calculateTotalCapacity() >
+                    parseInt(watch("maxAttendees")) && (
+                    <span className="block text-red-600 font-medium mt-1">
+                      ⚠️ Ticket capacity ({calculateTotalCapacity()}) exceeds
+                      maximum attendees ({watch("maxAttendees")})!
+                    </span>
+                  )}
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Premium (Optional)
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <input
-                    type="number"
-                    step="0.01"
-                    {...register("pricing.premium")}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
+              {/* Venue Capacity Validation */}
+              {getVenueCapacity() && (
+                <p className="text-xs text-blue-700 mt-1">
+                  Venue capacity: {getVenueCapacity()} people
+                  {calculateTotalCapacity() > getVenueCapacity() && (
+                    <span className="text-red-600 ml-2">
+                      ⚠️ Exceeds venue capacity!
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
           </div>
         )}

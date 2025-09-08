@@ -122,6 +122,53 @@ const createEvent = async (req, res) => {
       });
     }
 
+    console.log("Received pricing data:", JSON.stringify(pricing, null, 2));
+
+    // Additional validation for paid events with tickets
+    if (!pricing.isFree && pricing.tickets && pricing.tickets.length > 0) {
+      const totalTicketQuantity = pricing.tickets.reduce(
+        (sum, ticket) => sum + (ticket.quantity.total || 0),
+        0
+      );
+
+      // Validate ticket quantities don't exceed total capacity
+      if (totalTicketQuantity > totalCapacity) {
+        return res.status(400).json({
+          success: false,
+          message: `Total ticket quantity (${totalTicketQuantity}) exceeds maximum event capacity (${totalCapacity})`,
+        });
+      }
+
+      // Validate individual ticket fields
+      for (const ticket of pricing.tickets) {
+        if (
+          !ticket.type ||
+          ticket.price === undefined ||
+          !ticket.quantity ||
+          !ticket.quantity.total
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "All ticket types must have a name, price, and quantity",
+          });
+        }
+
+        if (ticket.price < 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Ticket prices cannot be negative",
+          });
+        }
+
+        if (ticket.quantity.total < 1) {
+          return res.status(400).json({
+            success: false,
+            message: "Ticket quantity must be at least 1",
+          });
+        }
+      }
+    }
+
     // Create event
     const event = new Event({
       title,
@@ -703,6 +750,7 @@ const updateEvent = async (req, res) => {
     }
 
     console.log("Update - Received pricing object:", updateData.pricing);
+    console.log("Update - Pricing tickets:", updateData.pricing?.tickets);
     console.log("Update - Full updateData:", updateData);
 
     const updatedEvent = await Event.findByIdAndUpdate(

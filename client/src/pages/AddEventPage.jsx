@@ -73,75 +73,9 @@ const AddEventPage = () => {
           endDate: endDate,
           timezone: "Asia/Kolkata",
         },
-        pricing: {
-          isFree: eventData.type === "free",
-          totalCapacity: parseInt(eventData.maxAttendees),
-          availableTickets: parseInt(eventData.maxAttendees),
-          tickets:
-            eventData.type === "paid"
-              ? [
-                  ...(eventData.pricing.general > 0
-                    ? [
-                        {
-                          type: "general",
-                          price: parseFloat(eventData.pricing.general),
-                          currency: "INR",
-                          quantity: {
-                            total: Math.floor(
-                              parseInt(eventData.maxAttendees) * 0.7
-                            ), // 70% general
-                            available: Math.floor(
-                              parseInt(eventData.maxAttendees) * 0.7
-                            ),
-                            sold: 0,
-                          },
-                        },
-                      ]
-                    : []),
-                  ...(eventData.pricing.vip > 0
-                    ? [
-                        {
-                          type: "vip",
-                          price: parseFloat(eventData.pricing.vip),
-                          currency: "INR",
-                          quantity: {
-                            total: Math.floor(
-                              parseInt(eventData.maxAttendees) * 0.2
-                            ), // 20% VIP
-                            available: Math.floor(
-                              parseInt(eventData.maxAttendees) * 0.2
-                            ),
-                            sold: 0,
-                          },
-                        },
-                      ]
-                    : []),
-                  ...(eventData.pricing.premium > 0
-                    ? [
-                        {
-                          type: "premium",
-                          price: parseFloat(eventData.pricing.premium),
-                          currency: "INR",
-                          quantity: {
-                            total: Math.floor(
-                              parseInt(eventData.maxAttendees) * 0.1
-                            ), // 10% premium
-                            available: Math.floor(
-                              parseInt(eventData.maxAttendees) * 0.1
-                            ),
-                            sold: 0,
-                          },
-                        },
-                      ]
-                    : []),
-                ]
-              : [],
-          general: eventData.pricing?.general || 0,
-          vip: eventData.pricing?.vip || 0,
-          premium: eventData.pricing?.premium || 0,
-        },
+        pricing: eventData.pricing, // Use the pricing object directly from the form
         tags: eventData.tags || [],
-        images: eventData.images || [], // Add images array
+        images: eventData.images || [],
         contactInfo: {
           email: eventData.contactEmail,
           phone: eventData.contactPhone,
@@ -155,6 +89,10 @@ const AddEventPage = () => {
       console.log("Transformed data:", transformedData);
 
       // Send as JSON data with images URLs from Cloudinary
+      console.log("Final transformed data:", transformedData);
+      console.log("Pricing data being sent:", transformedData.pricing);
+      console.log("Tickets in pricing:", transformedData.pricing?.tickets);
+
       const response = await axios.post(
         `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/events`,
         transformedData,
