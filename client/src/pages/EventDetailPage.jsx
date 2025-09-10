@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Calendar,
@@ -18,11 +18,15 @@ import {
   UserPlus,
   UserCheck,
   Eye,
+  Download,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
 import { useAuth } from "../contexts/AuthContext";
+import TicketSelectionModal from "../components/TicketSelectionModal";
+import PaymentModal from "../components/PaymentModal";
+import RegistrationSuccessModal from "../components/RegistrationSuccessModal";
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -33,70 +37,14 @@ const EventDetailPage = () => {
   const [error, setError] = useState(null);
   const [registrationStatus, setRegistrationStatus] = useState(null);
   const [registrationLoading, setRegistrationLoading] = useState(false);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedTickets, setSelectedTickets] = useState([]);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [registrationData, setRegistrationData] = useState(null);
 
-  useEffect(() => {
-    fetchEventDetails();
-  }, [id]);
-
-  useEffect(() => {
-    if (event && user?.type === "user") {
-      fetchRegistrationStatus();
-    }
-  }, [event, user]);
-
-  const fetchRegistrationStatus = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(`/events/${id}/registration-status`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setRegistrationStatus(response.data.data);
-    } catch (error) {
-      console.error("Error fetching registration status:", error);
-    }
-  };
-
-  const handleRegisterForEvent = async () => {
-    try {
-      setRegistrationLoading(true);
-      const token = localStorage.getItem("token");
-
-      const response = await axios.post(
-        `/events/${id}/register`,
-        { ticketType: "General", quantity: 1 },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.data.success) {
-        toast.success(response.data.message);
-        setRegistrationStatus({
-          isRegistered: true,
-          registration: {
-            user: user.id,
-            ticketType: "General",
-            quantity: 1,
-            paymentStatus: "completed",
-            bookingDate: new Date(),
-          },
-        });
-        // Refresh event to update attendee count
-        fetchEventDetails();
-      }
-    } catch (error) {
-      console.error("Error registering for event:", error);
-      const errorMessage =
-        error.response?.data?.message || "Failed to register for event";
-      toast.error(errorMessage);
-    } finally {
-      setRegistrationLoading(false);
-    }
-  };
-
-  const fetchEventDetails = async () => {
+  const fetchEventDetails = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
@@ -117,6 +65,222 @@ const EventDetailPage = () => {
       }
     } finally {
       setLoading(false);
+    }
+  }, [id, navigate]);
+
+  const fetchRegistrationStatus = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(`/events/${id}/registration-status`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setRegistrationStatus(response.data.data);
+    } catch (error) {
+      console.error("Error fetching registration status:", error);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchEventDetails();
+  }, [fetchEventDetails]);
+
+  useEffect(() => {
+    if (event && user?.type === "user") {
+      fetchRegistrationStatus();
+    }
+  }, [event, user, fetchRegistrationStatus]);
+
+  const handleRegisterForEvent = async () => {
+    try {
+      // Debug: Log event pricing info
+      console.log("🔍 Event pricing debug:", {
+        isFree: event.pricing?.isFree,
+        tickets: event.pricing?.tickets,
+        hasTickets: event.pricing?.tickets?.length > 0,
+        shouldShowModal:
+          !event.pricing?.isFree && event.pricing?.tickets?.length > 0,
+      });
+
+      // Check if event is paid
+      if (!event.pricing?.isFree && event.pricing?.tickets?.length > 0) {
+        console.log("🎫 Opening ticket selection modal for paid event");
+        // Show ticket selection modal for paid events
+        setShowTicketModal(true);
+        return;
+      }
+
+      console.log("💰 Proceeding with free event registration");
+      // For free events, register directly
+      setRegistrationLoading(true);
+      const token = localStorage.getItem("token");
+
+      const response = await axios.post(
+        `/events/${id}/register`,
+        { ticketType: "General", quantity: 1 },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(response.data.message);
+
+        // Set registration data for success modal
+        setRegistrationData({
+          event,
+          ticketDetails: {
+            ticketType: "General",
+            quantity: 1,
+            totalAmount: 0,
+          },
+          paymentId: null,
+          ticketNumber: response.data.data.ticketNumber,
+        });
+
+        setShowSuccessModal(true);
+
+        setRegistrationStatus({
+          isRegistered: true,
+          registration: {
+            user: user.id || user._id || user.userId,
+            ticketType: "General",
+            quantity: 1,
+            paymentStatus: "completed",
+            bookingDate: new Date(),
+          },
+        });
+        // Refresh event to update attendee count
+        fetchEventDetails();
+      }
+    } catch (error) {
+      console.error("Error registering for event:", error);
+      console.log("🔍 Registration error details:", {
+        status: error.response?.status,
+        requiresPayment: error.response?.data?.requiresPayment,
+        message: error.response?.data?.message,
+      });
+
+      const errorMessage =
+        error.response?.data?.message || "Failed to register for event";
+
+      // If it's a paid event that requires payment flow
+      if (error.response?.data?.requiresPayment) {
+        console.log("🎫 Backend confirmed paid event - opening ticket modal");
+        setShowTicketModal(true);
+        toast.error("Please select tickets and complete payment to register");
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setRegistrationLoading(false);
+    }
+  };
+
+  const handleTicketSelection = (tickets, total) => {
+    setSelectedTickets(tickets);
+    setTotalAmount(total);
+    setShowTicketModal(false);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = (paymentData) => {
+    setShowPaymentModal(false);
+    setSelectedTickets([]);
+    setTotalAmount(0);
+
+    // Set registration data for success modal
+    setRegistrationData({
+      event,
+      ticketDetails: {
+        ticketType: selectedTickets[0]?.ticketType,
+        quantity: selectedTickets.reduce((sum, t) => sum + t.quantity, 0),
+        totalAmount,
+      },
+      paymentId: paymentData.paymentId,
+      ticketNumber: paymentData.ticketNumber,
+    });
+
+    setShowSuccessModal(true);
+
+    // Update registration status
+    setRegistrationStatus({
+      isRegistered: true,
+      registration: {
+        user: user.id || user._id || user.userId,
+        paymentStatus: "completed",
+        bookingDate: new Date(),
+      },
+    });
+
+    // Refresh event details
+    fetchEventDetails();
+  };
+
+  const handleCloseModals = () => {
+    setShowTicketModal(false);
+    setShowPaymentModal(false);
+    setShowSuccessModal(false);
+    setSelectedTickets([]);
+    setTotalAmount(0);
+    setRegistrationData(null);
+  };
+
+  const handleDownloadTicket = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        toast.error("Please login to download ticket");
+        return;
+      }
+
+      if (!user) {
+        toast.error("User not found");
+        return;
+      }
+
+      // Get user ID - try different possible property names
+      const userId = user.id || user._id || user.userId;
+
+      if (!userId) {
+        console.error("User object:", user);
+        toast.error("User ID not found");
+        return;
+      }
+
+      // Download existing ticket
+      const response = await fetch(
+        `http://localhost:5000/api/tickets/download/${event._id}/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to download ticket");
+      }
+
+      // Create blob from response
+      const blob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ticket-${event.title.replace(/\s+/g, "-")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Ticket downloaded successfully!");
+    } catch (error) {
+      console.error("Error downloading ticket:", error);
+      toast.error("Failed to download ticket. Please try again.");
     }
   };
 
@@ -297,7 +461,8 @@ const EventDetailPage = () => {
             <div className="flex gap-2">
               {/* Show edit button only for event organizers */}
               {user?.type === "event_manager" &&
-                event?.organizer?._id === user.id &&
+                event?.organizer?._id ===
+                  (user.id || user._id || user.userId) &&
                 isEventUpcoming(event.dateTime?.startDate) &&
                 event.status === "upcoming" && (
                   <Link
@@ -315,9 +480,18 @@ const EventDetailPage = () => {
                 event.status === "upcoming" && (
                   <div>
                     {registrationStatus?.isRegistered ? (
-                      <div className="flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-md">
-                        <UserCheck className="h-4 w-4 mr-2" />
-                        Registered
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-md">
+                          <UserCheck className="h-4 w-4 mr-2" />
+                          Registered
+                        </div>
+                        <button
+                          onClick={handleDownloadTicket}
+                          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download Ticket
+                        </button>
                       </div>
                     ) : isEventFull() ? (
                       <div className="flex items-center px-4 py-2 bg-red-100 text-red-800 rounded-md">
@@ -594,6 +768,30 @@ const EventDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Ticket Selection Modal */}
+      <TicketSelectionModal
+        event={event}
+        isOpen={showTicketModal}
+        onClose={handleCloseModals}
+        onProceedToPayment={handleTicketSelection}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        event={event}
+        tickets={selectedTickets}
+        totalAmount={totalAmount}
+        isOpen={showPaymentModal}
+        onClose={handleCloseModals}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+      {/* Registration Success Modal */}
+      <RegistrationSuccessModal
+        isOpen={showSuccessModal}
+        onClose={handleCloseModals}
+        registrationData={registrationData}
+      />
     </div>
   );
 };

@@ -34,6 +34,9 @@ import EventsPage from "./pages/EventsPage";
 import LikedEventsPage from "./pages/LikedEventsPage";
 import FastFindPage from "./pages/FastFindPage";
 
+// Components
+import MyTickets from "./components/MyTickets";
+
 // Admin Pages
 import AdminVenuesPage from "./pages/AdminVenuesPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -134,6 +137,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <FastFindPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/my-tickets"
+              element={
+                <ProtectedRoute>
+                  <MyTickets />
                 </ProtectedRoute>
               }
             />

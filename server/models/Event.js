@@ -185,6 +185,29 @@ const eventSchema = new mongoose.Schema(
           enum: ["pending", "completed", "failed", "refunded"],
           default: "pending",
         },
+        paymentId: {
+          type: String,
+          default: null, // Razorpay payment ID
+        },
+        orderId: {
+          type: String,
+          default: null, // Razorpay order ID
+        },
+        totalAmount: {
+          type: Number,
+          default: 0, // Total amount paid for this registration
+        },
+        ticketNumber: {
+          type: String,
+          unique: true,
+          sparse: true, // Only enforce uniqueness for non-null values
+        },
+        ticketGenerated: {
+          type: Boolean,
+          default: false,
+        },
+        ticketGeneratedAt: Date,
+        qrData: String,
         checkInStatus: {
           type: String,
           enum: ["not_checked_in", "checked_in"],

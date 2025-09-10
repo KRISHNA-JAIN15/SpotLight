@@ -15,6 +15,7 @@ import {
   Settings,
   Users,
   CheckCircle,
+  Ticket,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -64,6 +65,7 @@ const Navbar = () => {
           ...baseNavigation,
           { name: "Events", href: "/events-display", icon: Calendar },
           { name: "Liked Events", href: "/liked-events", icon: Heart },
+          { name: "My Tickets", href: "/my-tickets", icon: Ticket },
         ];
     }
   };

@@ -20,10 +20,14 @@ import {
   PlayCircle,
   PauseCircle,
   XCircle,
+  Download,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
+import TicketSelectionModal from "../components/TicketSelectionModal";
+import PaymentModal from "../components/PaymentModal";
+import RegistrationSuccessModal from "../components/RegistrationSuccessModal";
 import axios from "axios";
 
 const DashboardPage = () => {
@@ -49,6 +53,15 @@ const DashboardPage = () => {
   const [likedEvents, setLikedEvents] = useState([]);
   const [tabLoading, setTabLoading] = useState(false);
   const [likedEventIds, setLikedEventIds] = useState(new Set());
+
+  // Payment flow state
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedTickets, setSelectedTickets] = useState([]);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [registrationData, setRegistrationData] = useState(null);
 
   // Redirect if not authenticated or profile not completed
   if (!isAuthenticated) {
@@ -304,12 +317,21 @@ const DashboardPage = () => {
     }
   };
 
-  const handleRegisterForEvent = async (eventId) => {
+  const handleRegisterForEvent = async (event) => {
     try {
+      // Check if event is paid
+      if (!event.pricing?.isFree && event.pricing?.tickets?.length > 0) {
+        // Show ticket selection modal for paid events
+        setSelectedEvent(event);
+        setShowTicketModal(true);
+        return;
+      }
+
+      // For free events, register directly
       const response = await axios.post(
         `${
           import.meta.env.VITE_API_URL || "http://localhost:5000"
-        }/api/events/${eventId}/register`,
+        }/api/events/${event._id}/register`,
         {},
         {
           headers: {
@@ -320,6 +342,20 @@ const DashboardPage = () => {
 
       if (response.data.success) {
         toast.success("Successfully registered for event!");
+
+        // Set registration data for success modal
+        setRegistrationData({
+          event,
+          ticketDetails: {
+            ticketType: "General",
+            quantity: 1,
+            totalAmount: 0,
+          },
+          paymentId: null,
+          ticketNumber: response.data.data.ticketNumber,
+        });
+
+        setShowSuccessModal(true);
         fetchRegistrationStatuses();
       }
     } catch (error) {
@@ -328,6 +364,46 @@ const DashboardPage = () => {
         error.response?.data?.message || "Failed to register for event"
       );
     }
+  };
+
+  const handleTicketSelection = (tickets, total) => {
+    setSelectedTickets(tickets);
+    setTotalAmount(total);
+    setShowTicketModal(false);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = (paymentData) => {
+    setShowPaymentModal(false);
+    setSelectedTickets([]);
+    setTotalAmount(0);
+
+    // Set registration data for success modal
+    setRegistrationData({
+      event: selectedEvent,
+      ticketDetails: {
+        ticketType: selectedTickets[0]?.ticketType,
+        quantity: selectedTickets.reduce((sum, t) => sum + t.quantity, 0),
+        totalAmount,
+      },
+      paymentId: paymentData.paymentId,
+      ticketNumber: paymentData.ticketNumber,
+    });
+
+    setShowSuccessModal(true);
+
+    // Refresh registration statuses
+    fetchRegistrationStatuses();
+  };
+
+  const handleCloseModals = () => {
+    setShowTicketModal(false);
+    setShowPaymentModal(false);
+    setShowSuccessModal(false);
+    setSelectedEvent(null);
+    setSelectedTickets([]);
+    setTotalAmount(0);
+    setRegistrationData(null);
   };
 
   const handleToggleLike = async (eventId) => {
@@ -580,7 +656,7 @@ const DashboardPage = () => {
                 !isRegistered &&
                 !isEventFull(event) && (
                   <button
-                    onClick={() => handleRegisterForEvent(event._id)}
+                    onClick={() => handleRegisterForEvent(event)}
                     className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center"
                   >
                     <UserPlus className="h-3 w-3 mr-1" />
@@ -898,6 +974,31 @@ const DashboardPage = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {renderTabContent()}
       </main>
+
+      {/* Ticket Selection Modal */}
+      <TicketSelectionModal
+        event={selectedEvent}
+        isOpen={showTicketModal}
+        onClose={handleCloseModals}
+        onProceedToPayment={handleTicketSelection}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        event={selectedEvent}
+        tickets={selectedTickets}
+        totalAmount={totalAmount}
+        isOpen={showPaymentModal}
+        onClose={handleCloseModals}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
+
+      {/* Registration Success Modal */}
+      <RegistrationSuccessModal
+        isOpen={showSuccessModal}
+        onClose={handleCloseModals}
+        registrationData={registrationData}
+      />
     </div>
   );
 };

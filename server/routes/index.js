@@ -7,6 +7,8 @@ const appRoutes = require("./app");
 const venueRoutes = require("./venues");
 const eventRoutes = require("./events");
 const adminRoutes = require("./admin");
+const paymentRoutes = require("./paymentRoutes");
+const ticketRoutes = require("./ticketRoutes");
 
 // Mount routes
 router.use("/auth", authRoutes);
@@ -14,6 +16,8 @@ router.use("/app", appRoutes);
 router.use("/venues", venueRoutes);
 router.use("/events", eventRoutes);
 router.use("/admin", adminRoutes);
+router.use("/payments", paymentRoutes);
+router.use("/tickets", ticketRoutes);
 
 // Health check route
 router.get("/health", (req, res) => {
@@ -36,6 +40,8 @@ router.get("/", (req, res) => {
       venues: "/api/venues",
       events: "/api/events",
       admin: "/api/admin",
+      payments: "/api/payments",
+      tickets: "/api/tickets",
       health: "/api/health",
     },
     authFlow: {

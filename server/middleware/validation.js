@@ -337,13 +337,13 @@ const validateEventCreation = [
     .isIn([
       "music",
       "sports",
-      "arts",
+      "tech",
       "food",
-      "technology",
+      "art",
       "business",
-      "health",
       "education",
       "entertainment",
+      "health",
       "other",
     ])
     .withMessage("Please select a valid event category"),

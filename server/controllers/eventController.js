@@ -1,6 +1,7 @@
 const Event = require("../models/Event");
 const Venue = require("../models/Venue");
 const User = require("../models/User");
+const TicketService = require("../services/ticketService");
 const { validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 
@@ -895,8 +896,31 @@ const registerForEvent = async (req, res) => {
     const { id } = req.params;
     const { ticketType = "General", quantity = 1 } = req.body;
 
+    console.log("🔍 Registration attempt:", {
+      eventId: id,
+      userId: req.user.id,
+      ticketType,
+      quantity,
+    });
+
     // Find the event
     const event = await Event.findById(id).populate("venue");
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    console.log("💰 Event pricing info:", {
+      isFree: event.pricing.isFree,
+      ticketsCount: event.pricing.tickets?.length,
+      tickets: event.pricing.tickets?.map((t) => ({
+        type: t.type,
+        price: t.price,
+      })),
+    });
 
     if (!event) {
       return res.status(404).json({
@@ -943,12 +967,26 @@ const registerForEvent = async (req, res) => {
 
     // For free events, directly register the user
     if (event.pricing.isFree) {
+      console.log("✅ Processing free event registration");
+
+      // Generate ticket number and QR data for free events
+      const ticketNumber = TicketService.generateTicketNumber();
+      const qrData = TicketService.generateQRData({
+        ticketNumber,
+        eventId: id,
+        attendeeEmail: req.user.email,
+      });
+
       event.attendees.push({
         user: req.user.id,
         ticketType,
         quantity,
         paymentStatus: "completed",
         bookingDate: new Date(),
+        ticketNumber,
+        ticketGenerated: true,
+        ticketGeneratedAt: new Date(),
+        qrData,
       });
 
       // Update ticket availability
@@ -959,29 +997,22 @@ const registerForEvent = async (req, res) => {
       return res.status(200).json({
         success: true,
         message: "Successfully registered for the event",
-        data: { event },
+        data: {
+          event,
+          ticketNumber,
+        },
       });
     }
 
-    // For paid events, create a pending registration
-    // In a real application, you would integrate with a payment gateway here
-    event.attendees.push({
-      user: req.user.id,
-      ticketType,
-      quantity,
-      paymentStatus: "pending", // In real app, this would be handled by payment gateway
-      bookingDate: new Date(),
-    });
-
-    await event.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Registration pending payment confirmation",
-      data: {
-        event,
-        registrationId: event.attendees[event.attendees.length - 1]._id,
-        // In real app, you would return payment gateway URL/token here
+    // For paid events, reject direct registration - must go through payment flow
+    console.log("❌ Rejecting paid event registration - payment required");
+    return res.status(400).json({
+      success: false,
+      message: "This is a paid event. Please use the payment flow to register.",
+      requiresPayment: true,
+      eventDetails: {
+        title: event.title,
+        tickets: event.pricing.tickets,
       },
     });
   } catch (error) {
