@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   MapPin,
   Users,
-  DollarSign,
+  Building,
   Phone,
   Mail,
   Globe,
@@ -302,17 +302,15 @@ const VenueDetailPage = () => {
                   </div>
                 </div>
 
-                {venue.pricePerHour && (
-                  <div className="flex items-center">
-                    <DollarSign className="h-5 w-5 text-gray-400 mr-3" />
-                    <div>
-                      <p className="font-medium text-gray-900">Price</p>
-                      <p className="text-gray-600">
-                        ₹{venue.pricePerHour}/hour
-                      </p>
-                    </div>
+                <div className="flex items-center">
+                  <Building className="h-5 w-5 text-gray-400 mr-3" />
+                  <div>
+                    <p className="font-medium text-gray-900">Type</p>
+                    <p className="text-gray-600 capitalize">
+                      {venue.venueType?.replace("_", " ")}
+                    </p>
                   </div>
-                )}
+                </div>
 
                 <div className="flex items-center">
                   <Calendar className="h-5 w-5 text-gray-400 mr-3" />

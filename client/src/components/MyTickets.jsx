@@ -34,16 +34,19 @@ const MyTickets = () => {
         );
 
         if (!response.ok) {
-          throw new Error("Failed to fetch tickets");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
         if (data.success) {
-          setTickets(data.tickets);
+          setTickets(data.tickets || []);
+        } else {
+          throw new Error(data.message || "Failed to fetch tickets");
         }
       } catch (error) {
         console.error("Error fetching tickets:", error);
-        toast.error("Failed to load tickets");
+        toast.error(`Failed to load tickets: ${error.message}`);
       } finally {
         setLoading(false);
       }
@@ -204,7 +207,13 @@ const MyTickets = () => {
                     <div>
                       <span className="text-gray-600">Ticket Number:</span>
                       <p className="font-medium font-mono">
-                        {ticket.ticketNumber}
+                        {ticket.ticketNumber || "Generating..."}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Status:</span>
+                      <p className={`font-medium ${ticket.ticketGenerated ? 'text-green-600' : 'text-yellow-600'}`}>
+                        {ticket.ticketGenerated ? "Ready" : "Processing"}
                       </p>
                     </div>
                   </div>
@@ -225,14 +234,17 @@ const MyTickets = () => {
                   onClick={() =>
                     handleDownloadTicket(ticket.eventId, ticket.ticketNumber)
                   }
+                  disabled={!ticket.ticketGenerated}
                   className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isEventPast(ticket.eventDate)
+                    !ticket.ticketGenerated
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : isEventPast(ticket.eventDate)
                       ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
                       : "bg-blue-600 text-white hover:bg-blue-700"
                   }`}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Download
+                  {!ticket.ticketGenerated ? "Processing..." : "Download"}
                 </button>
               </div>
             </div>

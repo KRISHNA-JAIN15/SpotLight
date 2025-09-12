@@ -231,6 +231,8 @@ const getUserTickets = async (req, res) => {
       });
     }
 
+    console.log(`Fetching tickets for user: ${userId}`);
+
     // Find all events where user is registered
     const events = await Event.find({
       "attendees.user": userId,
@@ -238,6 +240,8 @@ const getUserTickets = async (req, res) => {
     })
       .populate("venue")
       .select("title dateTime venue attendees");
+
+    console.log(`Found ${events.length} events for user ${userId}`);
 
     // Filter and format user's tickets
     const userTickets = events
@@ -248,11 +252,26 @@ const getUserTickets = async (req, res) => {
             attendee.paymentStatus === "completed"
         );
 
+        if (!attendeeRecord) {
+          console.log(`No attendee record found for event ${event._id}`);
+          return null;
+        }
+
+        // Safe venue location access
+        let eventLocation = "Location TBD";
+        if (event.venue) {
+          if (event.venue.address && event.venue.address.city) {
+            eventLocation = `${event.venue.name}, ${event.venue.address.city}`;
+          } else {
+            eventLocation = event.venue.name;
+          }
+        }
+
         return {
           eventId: event._id,
           eventTitle: event.title,
           eventDate: event.dateTime.startDate,
-          eventLocation: `${event.venue.name}, ${event.venue.address.city}`,
+          eventLocation: eventLocation,
           ticketType: attendeeRecord.ticketType || "General",
           ticketNumber: attendeeRecord.ticketNumber,
           ticketGenerated: attendeeRecord.ticketGenerated,
@@ -260,7 +279,9 @@ const getUserTickets = async (req, res) => {
           registrationDate: attendeeRecord.bookingDate,
         };
       })
-      .filter((ticket) => ticket.ticketGenerated);
+      .filter((ticket) => ticket !== null); // Include all tickets, even if not generated yet
+
+    console.log(`Returning ${userTickets.length} tickets for user ${userId}`);
 
     res.status(200).json({
       success: true,

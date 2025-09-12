@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import {
   MapPin,
   Users,
-  DollarSign,
+  Building,
   CheckCircle,
   XCircle,
   Eye,
@@ -192,13 +192,13 @@ const PendingVenueApprovals = () => {
                         <span>{venue.capacity} capacity</span>
                       </div>
                       <div className="flex items-center text-gray-500">
-                        <DollarSign className="h-4 w-4 mr-1" />
-                        <span>${venue.pricePerHour}/hour</span>
+                        <Building className="h-4 w-4 mr-1" />
+                        <span className="capitalize">
+                          {venue.type?.replace("_", " ")}
+                        </span>
                       </div>
                       <div className="text-gray-500">
-                        <span className="capitalize">
-                          {venue.type.replace("_", " ")}
-                        </span>
+                        <span>Created: {new Date(venue.createdAt).toLocaleDateString()}</span>
                       </div>
                     </div>
 

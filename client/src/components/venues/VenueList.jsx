@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   MapPin,
   Users,
-  DollarSign,
+  Building,
   Edit,
   Trash2,
   Eye,
@@ -181,8 +181,8 @@ const VenueList = () => {
                         {venue.capacity} capacity
                       </div>
                       <div className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />$
-                        {venue.pricePerHour}/hour
+                        <Building className="h-4 w-4 mr-1" />
+                        {venue.venueType?.replace("_", " ")}
                       </div>
                     </div>
                   </div>

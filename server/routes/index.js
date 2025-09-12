@@ -9,6 +9,7 @@ const eventRoutes = require("./events");
 const adminRoutes = require("./admin");
 const paymentRoutes = require("./paymentRoutes");
 const ticketRoutes = require("./ticketRoutes");
+const revenueRoutes = require("./revenueRoutes");
 
 // Mount routes
 router.use("/auth", authRoutes);
@@ -18,6 +19,7 @@ router.use("/events", eventRoutes);
 router.use("/admin", adminRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/tickets", ticketRoutes);
+router.use("/revenue", revenueRoutes);
 
 // Health check route
 router.get("/health", (req, res) => {
@@ -42,6 +44,7 @@ router.get("/", (req, res) => {
       admin: "/api/admin",
       payments: "/api/payments",
       tickets: "/api/tickets",
+      revenue: "/api/revenue",
       health: "/api/health",
     },
     authFlow: {

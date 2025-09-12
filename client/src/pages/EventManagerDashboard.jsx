@@ -13,9 +13,11 @@ import {
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
+import MoneyAnalysis from "../components/MoneyAnalysis";
 
 const EventManagerDashboard = () => {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
   const [stats, setStats] = useState({
     venues: { total: 0, pending: 0, approved: 0 },
     events: { total: 0, active: 0, upcoming: 0 },
@@ -34,21 +36,35 @@ const EventManagerDashboard = () => {
     try {
       setLoading(true);
 
-      // Fetch venues
-      const venuesResponse = await axios.get("/venues/my/venues", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const venues = venuesResponse.data.data.venues || [];
+      const [venuesResponse, eventsResponse, revenueResponse] =
+        await Promise.all([
+          // Fetch venues
+          axios.get("/venues/my/venues", {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          // Fetch events
+          axios.get("/events/my-events", {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }),
+          // Fetch revenue data
+          axios
+            .get("/revenue/manager-analytics", {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            })
+            .catch(() => ({
+              data: { data: { summary: { monthlyRevenue: 0 } } },
+            })), // Fallback if revenue endpoint fails
+        ]);
 
-      // Fetch events
-      const eventsResponse = await axios.get("/events/my-events", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const venues = venuesResponse.data.data.venues || [];
       const events = eventsResponse.data.data.events || [];
+      const revenueData = revenueResponse.data.data;
 
       // Calculate stats
       const venueStats = {
@@ -73,7 +89,7 @@ const EventManagerDashboard = () => {
         venues: venueStats,
         events: eventStats,
         attendees: totalAttendees,
-        revenue: 0, // Calculate from actual bookings
+        revenue: revenueData?.summary?.managerShareMonthly || 0, // Manager's share of monthly revenue
       });
 
       setRecentVenues(venues.slice(0, 3));
@@ -207,126 +223,167 @@ const EventManagerDashboard = () => {
             <div className="flex items-center">
               <TrendingUp className="h-8 w-8 text-yellow-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Revenue</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  ${stats.revenue.toLocaleString()}
+                <p className="text-sm font-medium text-gray-600">
+                  Monthly Revenue
                 </p>
-                <p className="text-xs text-gray-500">This month</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ₹{stats.revenue.toLocaleString()}
+                </p>
+                <p className="text-xs text-gray-500">Your share (75%)</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Items */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Venues */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Recent Venues
-                </h2>
-                <Link
-                  to="/venues/manage"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  View all →
-                </Link>
-              </div>
-            </div>
-            <div className="p-6">
-              {recentVenues.length === 0 ? (
-                <div className="text-center py-8">
-                  <MapPin className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">No venues yet</p>
-                  <Link
-                    to="/add-venue"
-                    className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    Add your first venue →
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {recentVenues.map((venue) => (
-                    <div
-                      key={venue._id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">
-                          {venue.name}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {venue.city}, {venue.state}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge(venue.approvalStatus)}
-                        <span className="text-sm text-gray-500">
-                          ${venue.pricePerHour}/hr
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              <button
+                onClick={() => setActiveTab("overview")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "overview"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => setActiveTab("analytics")}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === "analytics"
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Revenue Analytics
+              </button>
+            </nav>
           </div>
 
-          {/* Recent Events */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Recent Events
-                </h2>
-                <Link
-                  to="/my-events"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                >
-                  View all →
-                </Link>
-              </div>
-            </div>
-            <div className="p-6">
-              {recentEvents.length === 0 ? (
-                <div className="text-center py-8">
-                  <Calendar className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">No events yet</p>
-                  <Link
-                    to="/add-event"
-                    className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
-                  >
-                    Create your first event →
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {recentEvents.map((event) => (
-                    <div
-                      key={event._id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">
-                          {event.title}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {new Date(event.startDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusBadge(event.status)}
-                        <span className="text-sm text-gray-500">
-                          {event.attendees?.length || 0}/{event.maxAttendees}
-                        </span>
+          <div className="p-6">
+            {activeTab === "overview" && (
+              <div>
+                {/* Recent Items */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Recent Venues */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="p-6 border-b border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-gray-900">
+                          Recent Venues
+                        </h2>
+                        <Link
+                          to="/venues/manage"
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          View all →
+                        </Link>
                       </div>
                     </div>
-                  ))}
+                    <div className="p-6">
+                      {recentVenues.length === 0 ? (
+                        <div className="text-center py-8">
+                          <MapPin className="mx-auto h-8 w-8 text-gray-400" />
+                          <p className="mt-2 text-sm text-gray-500">
+                            No venues yet
+                          </p>
+                          <Link
+                            to="/add-venue"
+                            className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                          >
+                            Add your first venue →
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {recentVenues.map((venue) => (
+                            <div
+                              key={venue._id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex-1">
+                                <h3 className="font-medium text-gray-900">
+                                  {venue.name}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  {venue.city}, {venue.state}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {getStatusBadge(venue.approvalStatus)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Recent Events */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+                    <div className="p-6 border-b border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-gray-900">
+                          Recent Events
+                        </h2>
+                        <Link
+                          to="/my-events"
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          View all →
+                        </Link>
+                      </div>
+                    </div>
+                    <div className="p-6">
+                      {recentEvents.length === 0 ? (
+                        <div className="text-center py-8">
+                          <Calendar className="mx-auto h-8 w-8 text-gray-400" />
+                          <p className="mt-2 text-sm text-gray-500">
+                            No events yet
+                          </p>
+                          <Link
+                            to="/add-event"
+                            className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
+                          >
+                            Create your first event →
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {recentEvents.map((event) => (
+                            <div
+                              key={event._id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex-1">
+                                <h3 className="font-medium text-gray-900">
+                                  {event.title}
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(
+                                    event.startDate
+                                  ).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-500">
+                                  {event.attendees?.length || 0}/
+                                  {event.maxAttendees}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {activeTab === "analytics" && <MoneyAnalysis />}
           </div>
         </div>
       </main>
