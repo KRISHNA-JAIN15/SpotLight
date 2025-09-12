@@ -35,7 +35,10 @@ const MyTickets = () => {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+          throw new Error(
+            errorData.message ||
+              `HTTP ${response.status}: ${response.statusText}`
+          );
         }
 
         const data = await response.json();
@@ -212,7 +215,13 @@ const MyTickets = () => {
                     </div>
                     <div>
                       <span className="text-gray-600">Status:</span>
-                      <p className={`font-medium ${ticket.ticketGenerated ? 'text-green-600' : 'text-yellow-600'}`}>
+                      <p
+                        className={`font-medium ${
+                          ticket.ticketGenerated
+                            ? "text-green-600"
+                            : "text-yellow-600"
+                        }`}
+                      >
                         {ticket.ticketGenerated ? "Ready" : "Processing"}
                       </p>
                     </div>
