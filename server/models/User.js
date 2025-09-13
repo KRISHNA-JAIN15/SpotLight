@@ -109,6 +109,56 @@ const userSchema = new mongoose.Schema(
       linkedin: String,
       facebook: String,
     },
+    financialProfile: {
+      totalEarnings: {
+        type: Number,
+        default: 0,
+        // Total amount earned from ticket sales (manager's 75% share)
+      },
+      totalWithdrawals: {
+        type: Number,
+        default: 0,
+        // Total amount withdrawn by the manager
+      },
+      availableBalance: {
+        type: Number,
+        default: 0,
+        // Current available balance (totalEarnings - totalWithdrawals)
+      },
+      withdrawalHistory: [
+        {
+          amount: {
+            type: Number,
+            required: true,
+          },
+          withdrawalDate: {
+            type: Date,
+            default: Date.now,
+          },
+          method: {
+            type: String,
+            enum: ["bank_transfer", "upi", "wallet"],
+            default: "bank_transfer",
+          },
+          transactionId: {
+            type: String,
+            // Mock transaction ID for demo purposes
+          },
+          status: {
+            type: String,
+            enum: ["pending", "completed", "failed"],
+            default: "completed",
+          },
+          note: String,
+        },
+      ],
+      bankDetails: {
+        accountNumber: String,
+        ifscCode: String,
+        bankName: String,
+        accountHolderName: String,
+      },
+    },
     isActive: {
       type: Boolean,
       default: true,

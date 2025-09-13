@@ -26,15 +26,29 @@ const generateTicket = async (req, res) => {
 
     // Find the attendee record
     const attendeeRecord = event.attendees.find(
-      (attendee) =>
-        attendee.user.toString() === userId &&
-        attendee.paymentStatus === "completed"
+      (attendee) => attendee.user.toString() === userId
     );
 
     if (!attendeeRecord) {
       return res.status(404).json({
         success: false,
-        message: "No valid registration found for this event",
+        message: "You are not registered for this event",
+      });
+    }
+
+    // Check if this is a valid registration for ticket generation
+    const isFreeEvent = !event.ticketPrice || event.ticketPrice === 0;
+    const isPaidEvent = event.ticketPrice && event.ticketPrice > 0;
+
+    const isValidForTicketGeneration =
+      isFreeEvent ||
+      (isPaidEvent && attendeeRecord.paymentStatus === "completed");
+
+    if (!isValidForTicketGeneration) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Payment required before generating ticket. Please complete payment first.",
       });
     }
 
@@ -136,16 +150,29 @@ const downloadTicket = async (req, res) => {
 
     // Find the attendee record
     const attendeeRecord = event.attendees.find(
-      (attendee) =>
-        attendee.user.toString() === userId &&
-        attendee.paymentStatus === "completed"
+      (attendee) => attendee.user.toString() === userId
     );
 
     if (!attendeeRecord) {
       return res.status(404).json({
         success: false,
+        message: "You are not registered for this event.",
+      });
+    }
+
+    // Check if this is a valid registration for ticket download
+    const isFreeEvent = !event.ticketPrice || event.ticketPrice === 0;
+    const isPaidEvent = event.ticketPrice && event.ticketPrice > 0;
+
+    const isValidForDownload =
+      isFreeEvent ||
+      (isPaidEvent && attendeeRecord.paymentStatus === "completed");
+
+    if (!isValidForDownload) {
+      return res.status(403).json({
+        success: false,
         message:
-          "No valid ticket found for this event. Please ensure you have completed payment.",
+          "Payment required before downloading ticket. Please complete payment first.",
       });
     }
 
@@ -233,13 +260,12 @@ const getUserTickets = async (req, res) => {
 
     console.log(`Fetching tickets for user: ${userId}`);
 
-    // Find all events where user is registered
+    // Find all events where user is registered (both paid and free events)
     const events = await Event.find({
       "attendees.user": userId,
-      "attendees.paymentStatus": "completed",
     })
       .populate("venue")
-      .select("title dateTime venue attendees");
+      .select("title dateTime venue attendees ticketPrice");
 
     console.log(`Found ${events.length} events for user ${userId}`);
 
@@ -247,13 +273,28 @@ const getUserTickets = async (req, res) => {
     const userTickets = events
       .map((event) => {
         const attendeeRecord = event.attendees.find(
-          (attendee) =>
-            attendee.user.toString() === userId &&
-            attendee.paymentStatus === "completed"
+          (attendee) => attendee.user.toString() === userId
         );
 
         if (!attendeeRecord) {
           console.log(`No attendee record found for event ${event._id}`);
+          return null;
+        }
+
+        // Check if this is a valid registration
+        // For paid events, payment must be completed
+        // For free events, any registration is valid
+        const isFreeEvent = !event.ticketPrice || event.ticketPrice === 0;
+        const isPaidEvent = event.ticketPrice && event.ticketPrice > 0;
+
+        const isValidRegistration =
+          isFreeEvent ||
+          (isPaidEvent && attendeeRecord.paymentStatus === "completed");
+
+        if (!isValidRegistration) {
+          console.log(
+            `Invalid registration for event ${event._id} - payment required but not completed`
+          );
           return null;
         }
 
@@ -277,6 +318,11 @@ const getUserTickets = async (req, res) => {
           ticketGenerated: attendeeRecord.ticketGenerated,
           ticketGeneratedAt: attendeeRecord.ticketGeneratedAt,
           registrationDate: attendeeRecord.bookingDate,
+          isFreeEvent: isFreeEvent,
+          ticketPrice: event.ticketPrice || 0,
+          paymentStatus:
+            attendeeRecord.paymentStatus ||
+            (isFreeEvent ? "completed" : "pending"),
         };
       })
       .filter((ticket) => ticket !== null); // Include all tickets, even if not generated yet

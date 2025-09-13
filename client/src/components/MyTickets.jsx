@@ -210,7 +210,7 @@ const MyTickets = () => {
                     <div>
                       <span className="text-gray-600">Ticket Number:</span>
                       <p className="font-medium font-mono">
-                        {ticket.ticketNumber || "Generating..."}
+                        {ticket.ticketNumber || "Not generated yet"}
                       </p>
                     </div>
                     <div>
@@ -219,10 +219,28 @@ const MyTickets = () => {
                         className={`font-medium ${
                           ticket.ticketGenerated
                             ? "text-green-600"
-                            : "text-yellow-600"
+                            : ticket.isFreeEvent
+                            ? "text-blue-600"
+                            : ticket.paymentStatus === "completed"
+                            ? "text-yellow-600"
+                            : "text-red-600"
                         }`}
                       >
-                        {ticket.ticketGenerated ? "Ready" : "Processing"}
+                        {ticket.ticketGenerated
+                          ? "Ready for Download"
+                          : ticket.isFreeEvent
+                          ? "Free Event - Generate Ticket"
+                          : ticket.paymentStatus === "completed"
+                          ? "Payment Complete - Generate Ticket"
+                          : "Payment Required"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Event Type:</span>
+                      <p className="font-medium">
+                        {ticket.isFreeEvent
+                          ? "Free Event"
+                          : `Paid Event - ₹${ticket.ticketPrice}`}
                       </p>
                     </div>
                   </div>
@@ -243,17 +261,25 @@ const MyTickets = () => {
                   onClick={() =>
                     handleDownloadTicket(ticket.eventId, ticket.ticketNumber)
                   }
-                  disabled={!ticket.ticketGenerated}
+                  disabled={
+                    !ticket.isFreeEvent && ticket.paymentStatus !== "completed"
+                  }
                   className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    !ticket.ticketGenerated
+                    !ticket.isFreeEvent && ticket.paymentStatus !== "completed"
                       ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                       : isEventPast(ticket.eventDate)
                       ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                      : ticket.ticketGenerated
+                      ? "bg-green-600 text-white hover:bg-green-700"
                       : "bg-blue-600 text-white hover:bg-blue-700"
                   }`}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  {!ticket.ticketGenerated ? "Processing..." : "Download"}
+                  {!ticket.isFreeEvent && ticket.paymentStatus !== "completed"
+                    ? "Payment Required"
+                    : ticket.ticketGenerated
+                    ? "Download Ticket"
+                    : "Generate & Download"}
                 </button>
               </div>
             </div>

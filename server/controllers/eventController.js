@@ -281,6 +281,25 @@ const getMyEvents = async (req, res) => {
 // @access  Public
 const getAllEvents = async (req, res) => {
   try {
+    // Update event statuses based on current date before querying
+    const now = new Date();
+    await Event.updateMany(
+      {
+        status: { $in: ["upcoming", "ongoing"] },
+        "dateTime.endDate": { $lt: now },
+      },
+      { status: "completed" }
+    );
+
+    await Event.updateMany(
+      {
+        status: "upcoming",
+        "dateTime.startDate": { $lte: now },
+        "dateTime.endDate": { $gte: now },
+      },
+      { status: "ongoing" }
+    );
+
     const {
       category,
       city,
@@ -1068,15 +1087,32 @@ const getRegistrationStatus = async (req, res) => {
 const getMyRegistrations = async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Update event statuses before querying
     const now = new Date();
+    await Event.updateMany(
+      {
+        status: { $in: ["upcoming", "ongoing"] },
+        "dateTime.endDate": { $lt: now },
+      },
+      { status: "completed" }
+    );
+
+    await Event.updateMany(
+      {
+        status: "upcoming",
+        "dateTime.startDate": { $lte: now },
+        "dateTime.endDate": { $gte: now },
+      },
+      { status: "ongoing" }
+    );
 
     const events = await Event.find({
       "attendees.user": userId,
-      "dateTime.endDate": { $gte: now }, // Only upcoming events
     })
       .populate("venue", "name address city state")
       .populate("organizer", "name email")
-      .sort({ "dateTime.startDate": 1 });
+      .sort({ "dateTime.startDate": -1 }); // Show most recent first
 
     const registeredEvents = events.map((event) => {
       const registration = event.attendees.find(
@@ -1114,15 +1150,33 @@ const getMyRegistrations = async (req, res) => {
 const getMyPastEvents = async (req, res) => {
   try {
     const userId = req.user.id;
+
+    // Update event statuses before querying
     const now = new Date();
+    await Event.updateMany(
+      {
+        status: { $in: ["upcoming", "ongoing"] },
+        "dateTime.endDate": { $lt: now },
+      },
+      { status: "completed" }
+    );
+
+    await Event.updateMany(
+      {
+        status: "upcoming",
+        "dateTime.startDate": { $lte: now },
+        "dateTime.endDate": { $gte: now },
+      },
+      { status: "ongoing" }
+    );
 
     const events = await Event.find({
       "attendees.user": userId,
-      "dateTime.endDate": { $lt: now }, // Only past events
+      status: "completed", // Only show completed events
     })
       .populate("venue", "name address city state")
       .populate("organizer", "name email")
-      .sort({ "dateTime.endDate": -1 });
+      .sort({ "dateTime.endDate": -1 }); // Show most recent first
 
     const pastEvents = events.map((event) => {
       const registration = event.attendees.find(

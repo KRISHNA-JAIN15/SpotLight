@@ -131,6 +131,9 @@ const DashboardPage = () => {
       setLoading(true);
       const params = new URLSearchParams();
 
+      // Ensure we only fetch upcoming events for discovery
+      params.append("status", "upcoming");
+
       if (selectedCategory && selectedCategory !== "all") {
         params.append("category", selectedCategory);
       }

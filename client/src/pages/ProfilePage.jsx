@@ -23,6 +23,7 @@ import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Navbar from "../components/Navbar";
+import FinancialProfile from "../components/FinancialProfile";
 import {
   getIndianStates,
   getCitiesForState,
@@ -481,475 +482,486 @@ const ProfilePage = () => {
         </div>
 
         {/* Profile Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Profile Information */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Basic Information */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Basic Information
-              </h2>
+        <div className="space-y-8">
+          {/* Financial Profile - Only show for event managers */}
+          {user?.type === "event_manager" && <FinancialProfile />}
 
-              {isEditing ? (
-                <form className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Full Name
-                      </label>
-                      <input
-                        {...register("name")}
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      {errors.name && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.name.message}
-                        </p>
-                      )}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Profile Information */}
+            <div className="lg:col-span-2 space-y-8">
+              {/* Basic Information */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  Basic Information
+                </h2>
+
+                {isEditing ? (
+                  <form className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Full Name
+                        </label>
+                        <input
+                          {...register("name")}
+                          type="text"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {errors.name && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.name.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Phone Number
+                        </label>
+                        <input
+                          {...register("phone")}
+                          type="tel"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {errors.phone && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.phone.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date of Birth
+                        </label>
+                        <input
+                          {...register("dateOfBirth")}
+                          type="date"
+                          max={new Date().toISOString().split("T")[0]}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {errors.dateOfBirth && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.dateOfBirth.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Search Radius (km)
+                        </label>
+                        <input
+                          {...register("preferences.radius")}
+                          type="number"
+                          min="1"
+                          max="100"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        {errors.preferences?.radius && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.preferences.radius.message}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone Number
-                      </label>
-                      <input
-                        {...register("phone")}
-                        type="tel"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      {errors.phone && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.phone.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Date of Birth
-                      </label>
-                      <input
-                        {...register("dateOfBirth")}
-                        type="date"
-                        max={new Date().toISOString().split("T")[0]}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      {errors.dateOfBirth && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.dateOfBirth.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Search Radius (km)
-                      </label>
-                      <input
-                        {...register("preferences.radius")}
-                        type="number"
-                        min="1"
-                        max="100"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      {errors.preferences?.radius && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.preferences.radius.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bio
-                    </label>
-                    <textarea
-                      {...register("bio")}
-                      rows={4}
-                      maxLength={500}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Tell us a bit about yourself..."
-                    />
-                    {errors.bio && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.bio.message}
-                      </p>
-                    )}
-                  </div>
-                </form>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">
-                        Full Name
-                      </label>
-                      <p className="mt-1 text-gray-900">
-                        {user?.name || "Not specified"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">
-                        Phone Number
-                      </label>
-                      <p className="mt-1 text-gray-900">
-                        {user?.phone || "Not specified"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">
-                        Date of Birth
-                      </label>
-                      <p className="mt-1 text-gray-900">
-                        {formatDate(user?.dateOfBirth)}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">
-                        Search Radius
-                      </label>
-                      <p className="mt-1 text-gray-900">
-                        {user?.preferences?.radius || 10} km
-                      </p>
-                    </div>
-                  </div>
-
-                  {user?.bio && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">
                         Bio
                       </label>
-                      <p className="mt-1 text-gray-900">{user.bio}</p>
+                      <textarea
+                        {...register("bio")}
+                        rows={4}
+                        maxLength={500}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Tell us a bit about yourself..."
+                      />
+                      {errors.bio && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.bio.message}
+                        </p>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </form>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">
+                          Full Name
+                        </label>
+                        <p className="mt-1 text-gray-900">
+                          {user?.name || "Not specified"}
+                        </p>
+                      </div>
 
-            {/* Location Information */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Location
-              </h2>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">
+                          Phone Number
+                        </label>
+                        <p className="mt-1 text-gray-900">
+                          {user?.phone || "Not specified"}
+                        </p>
+                      </div>
 
-              {isEditing ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Address
-                    </label>
-                    <input
-                      {...register("location.address")}
-                      type="text"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Street address"
-                    />
-                    {errors.location?.address && (
-                      <p className="mt-1 text-sm text-red-600">
-                        {errors.location.address.message}
-                      </p>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">
+                          Date of Birth
+                        </label>
+                        <p className="mt-1 text-gray-900">
+                          {formatDate(user?.dateOfBirth)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">
+                          Search Radius
+                        </label>
+                        <p className="mt-1 text-gray-900">
+                          {user?.preferences?.radius || 10} km
+                        </p>
+                      </div>
+                    </div>
+
+                    {user?.bio && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">
+                          Bio
+                        </label>
+                        <p className="mt-1 text-gray-900">{user.bio}</p>
+                      </div>
                     )}
                   </div>
+                )}
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Location Information */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  Location
+                </h2>
+
+                {isEditing ? (
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        State <span className="text-red-500">*</span>
+                        Address
                       </label>
-                      <select
-                        {...register("location.state")}
+                      <input
+                        {...register("location.address")}
+                        type="text"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select State</option>
-                        {getIndianStates().map((state) => (
-                          <option key={state} value={state}>
-                            {state}
-                          </option>
-                        ))}
-                      </select>
-                      {(errors.location?.state || locationErrors.state) && (
+                        placeholder="Street address"
+                      />
+                      {errors.location?.address && (
                         <p className="mt-1 text-sm text-red-600">
-                          {errors.location?.state?.message ||
-                            locationErrors.state}
+                          {errors.location.address.message}
                         </p>
                       )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          State <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          {...register("location.state")}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select State</option>
+                          {getIndianStates().map((state) => (
+                            <option key={state} value={state}>
+                              {state}
+                            </option>
+                          ))}
+                        </select>
+                        {(errors.location?.state || locationErrors.state) && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.location?.state?.message ||
+                              locationErrors.state}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          City <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          {...register("location.city")}
+                          disabled={!selectedState}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                          <option value="">
+                            {selectedState
+                              ? "Select City"
+                              : "First select a state"}
+                          </option>
+                          {availableCities.map((city) => (
+                            <option key={city} value={city}>
+                              {city}
+                            </option>
+                          ))}
+                        </select>
+                        {(errors.location?.city || locationErrors.city) && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.location?.city?.message ||
+                              locationErrors.city}
+                          </p>
+                        )}
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        City <span className="text-red-500">*</span>
+                        Country
                       </label>
-                      <select
-                        {...register("location.city")}
-                        disabled={!selectedState}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      >
-                        <option value="">
-                          {selectedState
-                            ? "Select City"
-                            : "First select a state"}
-                        </option>
-                        {availableCities.map((city) => (
-                          <option key={city} value={city}>
-                            {city}
-                          </option>
-                        ))}
-                      </select>
-                      {(errors.location?.city || locationErrors.city) && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.location?.city?.message ||
-                            locationErrors.city}
-                        </p>
+                      <input
+                        {...register("location.country")}
+                        type="text"
+                        value="India"
+                        readOnly
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+                      />
+                    </div>
+
+                    {/* Geocoding Button and Coordinates Display */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Location Coordinates
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const address = watch("location.address");
+                            const city = watch("location.city");
+                            const state = watch("location.state");
+                            if (city && state) {
+                              geocodeAddress(address, city, state);
+                            } else {
+                              toast.error(
+                                "Please fill in city and state first"
+                              );
+                            }
+                          }}
+                          disabled={geoLoading}
+                          className="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors duration-200 disabled:opacity-50"
+                        >
+                          {geoLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
+                              Getting...
+                            </>
+                          ) : (
+                            <>
+                              <MapPin className="h-3 w-3 mr-1" />
+                              Get Coordinates
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      {coordinates ? (
+                        <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                          <div className="flex items-center text-green-800 text-sm">
+                            <MapPin className="h-4 w-4 mr-2" />
+                            <span>
+                              Lat: {coordinates.latitude.toFixed(6)}, Lng:{" "}
+                              {coordinates.longitude.toFixed(6)}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                          <div className="flex items-center text-gray-600 text-sm">
+                            <MapPin className="h-4 w-4 mr-2" />
+                            <span>No coordinates available</span>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">
+                        Address
+                      </label>
+                      <p className="mt-1 text-gray-900">
+                        {user?.location?.address || "Not specified"}
+                      </p>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Country
-                    </label>
-                    <input
-                      {...register("location.country")}
-                      type="text"
-                      value="India"
-                      readOnly
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
-                    />
-                  </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">
+                          City
+                        </label>
+                        <p className="mt-1 text-gray-900">
+                          {user?.location?.city || "Not specified"}
+                        </p>
+                      </div>
 
-                  {/* Geocoding Button and Coordinates Display */}
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500">
+                          State
+                        </label>
+                        <p className="mt-1 text-gray-900">
+                          {user?.location?.state || "Not specified"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">
+                        Country
+                      </label>
+                      <p className="mt-1 text-gray-900">India</p>
+                    </div>
+
+                    {/* Coordinates Display in Read-only Mode */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500">
                         Location Coordinates
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const address = watch("location.address");
-                          const city = watch("location.city");
-                          const state = watch("location.state");
-                          if (city && state) {
-                            geocodeAddress(address, city, state);
-                          } else {
-                            toast.error("Please fill in city and state first");
-                          }
-                        }}
-                        disabled={geoLoading}
-                        className="inline-flex items-center px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors duration-200 disabled:opacity-50"
-                      >
-                        {geoLoading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-1"></div>
-                            Getting...
-                          </>
-                        ) : (
-                          <>
-                            <MapPin className="h-3 w-3 mr-1" />
-                            Get Coordinates
-                          </>
-                        )}
-                      </button>
-                    </div>
-                    {coordinates ? (
-                      <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                        <div className="flex items-center text-green-800 text-sm">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>
-                            Lat: {coordinates.latitude.toFixed(6)}, Lng:{" "}
-                            {coordinates.longitude.toFixed(6)}
-                          </span>
+                      {user?.location?.coordinates &&
+                      user.location.coordinates.length === 2 ? (
+                        <div className="mt-1 bg-green-50 border border-green-200 rounded-md p-3">
+                          <div className="flex items-center text-green-800 text-sm">
+                            <MapPin className="h-4 w-4 mr-2" />
+                            <span>
+                              Lat: {user.location.coordinates[1].toFixed(6)},
+                              Lng: {user.location.coordinates[0].toFixed(6)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-                        <div className="flex items-center text-gray-600 text-sm">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>No coordinates available</span>
+                      ) : (
+                        <div className="mt-1 bg-gray-50 border border-gray-200 rounded-md p-3">
+                          <div className="flex items-center text-gray-600 text-sm">
+                            <MapPin className="h-4 w-4 mr-2" />
+                            <span>No coordinates available</span>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      Address
-                    </label>
-                    <p className="mt-1 text-gray-900">
-                      {user?.location?.address || "Not specified"}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">
-                        City
-                      </label>
-                      <p className="mt-1 text-gray-900">
-                        {user?.location?.city || "Not specified"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500">
-                        State
-                      </label>
-                      <p className="mt-1 text-gray-900">
-                        {user?.location?.state || "Not specified"}
-                      </p>
+                      )}
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      Country
-                    </label>
-                    <p className="mt-1 text-gray-900">India</p>
-                  </div>
-
-                  {/* Coordinates Display in Read-only Mode */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-500">
-                      Location Coordinates
-                    </label>
-                    {user?.location?.coordinates &&
-                    user.location.coordinates.length === 2 ? (
-                      <div className="mt-1 bg-green-50 border border-green-200 rounded-md p-3">
-                        <div className="flex items-center text-green-800 text-sm">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>
-                            Lat: {user.location.coordinates[1].toFixed(6)}, Lng:{" "}
-                            {user.location.coordinates[0].toFixed(6)}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-1 bg-gray-50 border border-gray-200 rounded-md p-3">
-                        <div className="flex items-center text-gray-600 text-sm">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          <span>No coordinates available</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Sidebar */}
-          <div className="space-y-8">
-            {/* Interests */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Interests
-              </h2>
+            {/* Sidebar */}
+            <div className="space-y-8">
+              {/* Interests */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  Interests
+                </h2>
 
-              {isEditing ? (
-                <div>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Select the types of events you're interested in:
-                  </p>
-                  <div className="grid grid-cols-1 gap-3">
-                    {categories.map((category) => (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => handleCategoryToggle(category.id)}
-                        className={`p-3 rounded-lg border-2 text-left transition-colors ${
-                          selectedCategories.includes(category.id)
-                            ? "border-blue-500 bg-blue-50 text-blue-700"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-center">
-                          <span className="text-lg mr-3">{category.icon}</span>
-                          <span className="text-sm font-medium">
-                            {category.label}
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {user?.preferences?.categories?.length > 0 ? (
-                    <div className="space-y-2">
-                      {user.preferences.categories.map((categoryId) => {
-                        const category = categories.find(
-                          (c) => c.id === categoryId
-                        );
-                        return category ? (
-                          <div
-                            key={categoryId}
-                            className="flex items-center p-2 bg-blue-50 rounded-lg"
-                          >
+                {isEditing ? (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Select the types of events you're interested in:
+                    </p>
+                    <div className="grid grid-cols-1 gap-3">
+                      {categories.map((category) => (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => handleCategoryToggle(category.id)}
+                          className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                            selectedCategories.includes(category.id)
+                              ? "border-blue-500 bg-blue-50 text-blue-700"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-center">
                             <span className="text-lg mr-3">
                               {category.icon}
                             </span>
-                            <span className="text-sm font-medium text-blue-700">
+                            <span className="text-sm font-medium">
                               {category.label}
                             </span>
                           </div>
-                        ) : null;
-                      })}
+                        </button>
+                      ))}
                     </div>
-                  ) : (
-                    <p className="text-gray-500 text-sm">
-                      No interests selected
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Stats */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                Activity
-              </h2>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Calendar className="h-5 w-5 text-blue-600 mr-3" />
-                    <span className="text-sm text-gray-600">
-                      Events Attended
-                    </span>
                   </div>
-                  <span className="font-semibold text-gray-900">0</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Heart className="h-5 w-5 text-red-600 mr-3" />
-                    <span className="text-sm text-gray-600">Liked Events</span>
+                ) : (
+                  <div>
+                    {user?.preferences?.categories?.length > 0 ? (
+                      <div className="space-y-2">
+                        {user.preferences.categories.map((categoryId) => {
+                          const category = categories.find(
+                            (c) => c.id === categoryId
+                          );
+                          return category ? (
+                            <div
+                              key={categoryId}
+                              className="flex items-center p-2 bg-blue-50 rounded-lg"
+                            >
+                              <span className="text-lg mr-3">
+                                {category.icon}
+                              </span>
+                              <span className="text-sm font-medium text-blue-700">
+                                {category.label}
+                              </span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm">
+                        No interests selected
+                      </p>
+                    )}
                   </div>
-                  <span className="font-semibold text-gray-900">0</span>
-                </div>
+                )}
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Users className="h-5 w-5 text-green-600 mr-3" />
-                    <span className="text-sm text-gray-600">Following</span>
-                  </div>
-                  <span className="font-semibold text-gray-900">0</span>
-                </div>
+              {/* Stats */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                  Activity
+                </h2>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <Star className="h-5 w-5 text-yellow-600 mr-3" />
-                    <span className="text-sm text-gray-600">Reviews</span>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Calendar className="h-5 w-5 text-blue-600 mr-3" />
+                      <span className="text-sm text-gray-600">
+                        Events Attended
+                      </span>
+                    </div>
+                    <span className="font-semibold text-gray-900">0</span>
                   </div>
-                  <span className="font-semibold text-gray-900">0</span>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Heart className="h-5 w-5 text-red-600 mr-3" />
+                      <span className="text-sm text-gray-600">
+                        Liked Events
+                      </span>
+                    </div>
+                    <span className="font-semibold text-gray-900">0</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Users className="h-5 w-5 text-green-600 mr-3" />
+                      <span className="text-sm text-gray-600">Following</span>
+                    </div>
+                    <span className="font-semibold text-gray-900">0</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Star className="h-5 w-5 text-yellow-600 mr-3" />
+                      <span className="text-sm text-gray-600">Reviews</span>
+                    </div>
+                    <span className="font-semibold text-gray-900">0</span>
+                  </div>
                 </div>
               </div>
             </div>

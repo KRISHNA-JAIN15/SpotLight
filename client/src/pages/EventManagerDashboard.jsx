@@ -367,12 +367,6 @@ const EventManagerDashboard = () => {
                                   ).toLocaleDateString()}
                                 </p>
                               </div>
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-500">
-                                  {event.attendees?.length || 0}/
-                                  {event.maxAttendees}
-                                </span>
-                              </div>
                             </div>
                           ))}
                         </div>

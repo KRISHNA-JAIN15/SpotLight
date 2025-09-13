@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Event = require("../models/Event");
+const User = require("../models/User");
 
 // @desc    Get manager revenue analytics
 // @route   GET /api/revenue/manager-analytics
@@ -253,7 +254,226 @@ const getAdminRevenue = async (req, res) => {
   }
 };
 
+// @desc    Get manager financial profile
+// @route   GET /api/revenue/financial-profile
+// @access  Private (Event Manager)
+const getFinancialProfile = async (req, res) => {
+  try {
+    if (req.user.type !== "event_manager") {
+      return res.status(403).json({
+        success: false,
+        message: "Only event managers can access this resource",
+      });
+    }
+
+    // Get user with financial profile
+    const user = await User.findById(req.user._id).select("financialProfile");
+
+    // Calculate real-time earnings from events
+    const events = await Event.find({
+      organizer: req.user._id,
+      "attendees.paymentStatus": "completed",
+    });
+
+    let calculatedEarnings = 0;
+    events.forEach((event) => {
+      const completedAttendees = event.attendees.filter(
+        (attendee) => attendee.paymentStatus === "completed"
+      );
+
+      completedAttendees.forEach((attendee) => {
+        const amount = attendee.totalAmount || 0;
+        calculatedEarnings += amount * 0.75; // Manager gets 75%
+      });
+    });
+
+    // Update user's total earnings if needed
+    if (
+      !user.financialProfile ||
+      user.financialProfile.totalEarnings !== calculatedEarnings
+    ) {
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+          $set: {
+            "financialProfile.totalEarnings": calculatedEarnings,
+            "financialProfile.availableBalance":
+              calculatedEarnings -
+              (user.financialProfile?.totalWithdrawals || 0),
+          },
+        },
+        { new: true, upsert: true }
+      ).select("financialProfile");
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          totalEarnings: calculatedEarnings,
+          totalWithdrawals: updatedUser.financialProfile?.totalWithdrawals || 0,
+          availableBalance:
+            calculatedEarnings -
+            (updatedUser.financialProfile?.totalWithdrawals || 0),
+          withdrawalHistory:
+            updatedUser.financialProfile?.withdrawalHistory || [],
+          bankDetails: updatedUser.financialProfile?.bankDetails || {},
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalEarnings:
+          user.financialProfile?.totalEarnings || calculatedEarnings,
+        totalWithdrawals: user.financialProfile?.totalWithdrawals || 0,
+        availableBalance:
+          (user.financialProfile?.totalEarnings || calculatedEarnings) -
+          (user.financialProfile?.totalWithdrawals || 0),
+        withdrawalHistory: user.financialProfile?.withdrawalHistory || [],
+        bankDetails: user.financialProfile?.bankDetails || {},
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching financial profile:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch financial profile",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Request withdrawal
+// @route   POST /api/revenue/withdraw
+// @access  Private (Event Manager)
+const requestWithdrawal = async (req, res) => {
+  try {
+    if (req.user.type !== "event_manager") {
+      return res.status(403).json({
+        success: false,
+        message: "Only event managers can access this resource",
+      });
+    }
+
+    const { amount, method = "bank_transfer", note } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid withdrawal amount is required",
+      });
+    }
+
+    // Get user's current financial profile
+    const user = await User.findById(req.user._id).select("financialProfile");
+    const currentBalance =
+      (user.financialProfile?.totalEarnings || 0) -
+      (user.financialProfile?.totalWithdrawals || 0);
+
+    if (amount > currentBalance) {
+      return res.status(400).json({
+        success: false,
+        message: "Insufficient balance for withdrawal",
+      });
+    }
+
+    // Generate mock transaction ID
+    const transactionId = `TXN${Date.now()}${Math.random()
+      .toString(36)
+      .substr(2, 5)
+      .toUpperCase()}`;
+
+    // Create withdrawal record
+    const withdrawal = {
+      amount: parseFloat(amount),
+      withdrawalDate: new Date(),
+      method,
+      transactionId,
+      status: "completed", // Mock as completed immediately
+      note: note || `Withdrawal via ${method}`,
+    };
+
+    // Update user's financial profile
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $push: { "financialProfile.withdrawalHistory": withdrawal },
+        $inc: { "financialProfile.totalWithdrawals": parseFloat(amount) },
+        $set: {
+          "financialProfile.availableBalance":
+            currentBalance - parseFloat(amount),
+        },
+      },
+      { new: true, upsert: true }
+    ).select("financialProfile");
+
+    res.status(200).json({
+      success: true,
+      message: "Withdrawal request processed successfully",
+      data: {
+        withdrawal,
+        newBalance: currentBalance - parseFloat(amount),
+        totalWithdrawals: updatedUser.financialProfile.totalWithdrawals,
+      },
+    });
+  } catch (error) {
+    console.error("Error processing withdrawal:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to process withdrawal",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Update bank details
+// @route   PUT /api/revenue/bank-details
+// @access  Private (Event Manager)
+const updateBankDetails = async (req, res) => {
+  try {
+    if (req.user.type !== "event_manager") {
+      return res.status(403).json({
+        success: false,
+        message: "Only event managers can access this resource",
+      });
+    }
+
+    const { accountNumber, ifscCode, bankName, accountHolderName } = req.body;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $set: {
+          "financialProfile.bankDetails": {
+            accountNumber,
+            ifscCode,
+            bankName,
+            accountHolderName,
+          },
+        },
+      },
+      { new: true, upsert: true }
+    ).select("financialProfile.bankDetails");
+
+    res.status(200).json({
+      success: true,
+      message: "Bank details updated successfully",
+      data: updatedUser.financialProfile.bankDetails,
+    });
+  } catch (error) {
+    console.error("Error updating bank details:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update bank details",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getManagerRevenue,
   getAdminRevenue,
+  getFinancialProfile,
+  requestWithdrawal,
+  updateBankDetails,
 };
