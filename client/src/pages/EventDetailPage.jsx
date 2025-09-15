@@ -253,7 +253,9 @@ const EventDetailPage = () => {
 
       // Download existing ticket
       const response = await fetch(
-        `http://localhost:5000/api/tickets/download/${event._id}/${userId}`,
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:5000"
+        }/api/tickets/download/${event._id}/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -386,20 +386,20 @@ const LikedEventsPage = () => {
                 Events you've bookmarked and liked
               </p>
             </div>
-            <div className="flex items-center space-x-3">
+            {/* <div className="flex items-center space-x-3">
               <Link
-                to="/events"
+                to="/events-display"
                 className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
               >
                 Browse Events
               </Link>
               <Link
-                to="/dashboard"
+                to="/fast-find"
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                Dashboard
+                Fast Find
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </header>
@@ -422,16 +422,16 @@ const LikedEventsPage = () => {
             </p>
             <div className="flex justify-center space-x-4">
               <Link
-                to="/events"
+                to="/events-display"
                 className="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Browse Events
               </Link>
               <Link
-                to="/dashboard"
+                to="/fast-find"
                 className="px-6 py-3 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
               >
-                Go to Dashboard
+                Fast Find
               </Link>
             </div>
           </div>

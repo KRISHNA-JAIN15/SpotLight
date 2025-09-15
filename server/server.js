@@ -13,7 +13,10 @@ app.use(helmet());
 // CORS middleware
 const allowedOrigins = process.env.FRONTEND_URL
   ? [process.env.FRONTEND_URL]
-  : ["http://localhost:3000", "http://localhost:5173"];
+  : process.env.DEFAULT_CORS_ORIGINS?.split(",") || [
+      "http://localhost:3000",
+      "http://localhost:5173",
+    ];
 
 app.use(
   cors({
@@ -26,8 +29,8 @@ app.use(
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 100 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // limit each IP to 1000 requests per windowMs
   message: {
     success: false,
     message: "Too many requests from this IP, please try again later.",
@@ -40,8 +43,8 @@ const limiter = rateLimit({
 app.use(
   "/api/auth",
   rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 auth requests per windowMs
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+    max: parseInt(process.env.RATE_LIMIT_AUTH_MAX_REQUESTS) || 100, // limit each IP to 100 auth requests per windowMs
     message: {
       success: false,
       message: "Too many authentication attempts, please try again later.",
@@ -52,8 +55,13 @@ app.use(
 // app.use("/api/", limiter);
 
 // Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.json({ limit: process.env.BODY_PARSER_LIMIT || "10mb" }));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: process.env.BODY_PARSER_LIMIT || "10mb",
+  })
+);
 
 // Trust proxy (for rate limiting and security when behind reverse proxy)
 app.set("trust proxy", 1);
@@ -67,7 +75,7 @@ app.get("/", (req, res) => {
   res.status(200).json({
     success: true,
     message: "Spotlight Events Server is running!",
-    version: "1.0.0",
+    version: process.env.APP_VERSION || "1.0.0",
     environment: process.env.NODE_ENV || "development",
   });
 });
@@ -130,7 +138,9 @@ app.use((err, req, res, next) => {
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(
-      process.env.MONGODB_URI || "mongodb://localhost:27017/spotlight_events"
+      process.env.MONGODB_URI ||
+        process.env.MONGODB_DEFAULT_URI ||
+        "mongodb://localhost:27017/spotlight_events"
     );
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
@@ -152,7 +162,11 @@ const startServer = async () => {
           process.env.NODE_ENV || "development"
         } mode on port ${PORT}`
       );
-      console.log(`API Documentation: http://localhost:${PORT}/api`);
+      console.log(
+        `API Documentation: http://localhost:${PORT}${
+          process.env.API_DOCS_PATH || "/api"
+        }`
+      );
 
       // Initialize cache after server starts
       try {
