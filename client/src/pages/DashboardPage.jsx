@@ -39,15 +39,14 @@ const DashboardPage = () => {
   } = useAuth();
 
   // Tab states
-  const [activeTab, setActiveTab] = useState("discover");
+  const [activeTab, setActiveTab] = useState("registered");
 
-  // Discover tab states
-  const [discoverEvents, setDiscoverEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // States no longer needed for discover events
+  const [loading, setLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sortBy, setSortBy] = useState("date");
   const [userLocation, setUserLocation] = useState(null);
-  const [locationLoading, setLocationLoading] = useState(true);
+  const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [registrationStatus, setRegistrationStatus] = useState({});
 
@@ -68,30 +67,12 @@ const DashboardPage = () => {
   const [registrationData, setRegistrationData] = useState(null);
 
   useEffect(() => {
-    getUserLocation();
     fetchLikedEventIds(); // Fetch liked events to know heart status
-    // Don't fetch discover events here - wait for userLocation to be set
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (userLocation) {
-      fetchDiscoverEvents();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory, sortBy, userLocation]);
-
-  useEffect(() => {
-    if (discoverEvents.length > 0) {
-      fetchRegistrationStatuses();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [discoverEvents]);
-
-  useEffect(() => {
-    if (activeTab !== "discover") {
-      fetchTabData(activeTab);
-    }
+    fetchTabData(activeTab);
   }, [activeTab]);
 
   // Redirect if not authenticated or profile not completed
@@ -130,62 +111,6 @@ const DashboardPage = () => {
         "No location found in your profile. Please update your profile with your location to see nearby events."
       );
       setLocationLoading(false);
-    }
-  };
-
-  const fetchDiscoverEvents = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-
-      // Ensure we only fetch upcoming events for discovery
-      params.append("status", "upcoming");
-
-      if (selectedCategory && selectedCategory !== "all") {
-        params.append("category", selectedCategory);
-      }
-
-      if (sortBy) {
-        params.append("sort", sortBy);
-      }
-
-      if (userLocation) {
-        params.append("latitude", userLocation.latitude);
-        params.append("longitude", userLocation.longitude);
-        // Radius will be determined by user's profile preference on backend
-      }
-
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:5000"
-        }/api/events?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      console.log("Dashboard API Response:", response.data);
-      console.log(
-        "Events received:",
-        response.data.data?.events || response.data.data
-      );
-
-      if (response.data.success) {
-        // Handle the new nested API response structure
-        const eventsData = response.data.data.events || response.data.data;
-        console.log("Setting discoverEvents to:", eventsData);
-        setDiscoverEvents(Array.isArray(eventsData) ? eventsData : []);
-      } else {
-        setDiscoverEvents([]);
-      }
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      toast.error("Failed to fetch events");
-      setDiscoverEvents([]); // Ensure it's always an array
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -290,43 +215,6 @@ const DashboardPage = () => {
     }
   };
 
-  const fetchRegistrationStatuses = async () => {
-    try {
-      if (!Array.isArray(discoverEvents) || discoverEvents.length === 0) {
-        return;
-      }
-
-      const statuses = {};
-      await Promise.all(
-        discoverEvents.map(async (event) => {
-          try {
-            const response = await axios.get(
-              `${
-                import.meta.env.VITE_API_URL || "http://localhost:5000"
-              }/api/events/${event._id}/registration-status`,
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-              }
-            );
-            if (response.data.success) {
-              statuses[event._id] = response.data.data;
-            }
-          } catch (error) {
-            console.error(
-              `Error fetching registration status for event ${event._id}:`,
-              error
-            );
-          }
-        })
-      );
-      setRegistrationStatus(statuses);
-    } catch (error) {
-      console.error("Error fetching registration statuses:", error);
-    }
-  };
-
   const handleRegisterForEvent = async (event) => {
     try {
       // Check if event is paid
@@ -366,7 +254,6 @@ const DashboardPage = () => {
         });
 
         setShowSuccessModal(true);
-        fetchRegistrationStatuses();
       }
     } catch (error) {
       console.error("Registration error:", error);
@@ -401,9 +288,6 @@ const DashboardPage = () => {
     });
 
     setShowSuccessModal(true);
-
-    // Refresh registration statuses
-    fetchRegistrationStatuses();
   };
 
   const handleCloseModals = () => {
@@ -551,7 +435,6 @@ const DashboardPage = () => {
   };
 
   const tabs = [
-    { id: "discover", label: "Discover Events", icon: Navigation },
     { id: "registered", label: "My Registrations", icon: CalendarDays },
     { id: "past", label: "Past Events", icon: History },
     { id: "liked", label: "Liked Events", icon: BookmarkIcon },

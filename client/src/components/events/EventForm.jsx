@@ -485,6 +485,16 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
       dateTime: {
         startDate: data.startDate,
         endDate: data.endDate,
+        startTime: new Date(data.startDate).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }),
+        endTime: new Date(data.endDate).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }),
       },
       pricing: pricingData,
       tags,

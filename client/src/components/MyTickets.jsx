@@ -60,7 +60,7 @@ const MyTickets = () => {
     }
   }, [user]);
 
-  const handleDownloadTicket = async (eventId, ticketNumber) => {
+  const handleDownloadTicket = async (eventId) => {
     try {
       const token = localStorage.getItem("token");
 
@@ -95,13 +95,18 @@ const MyTickets = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ticket-${ticketNumber}.pdf`;
+      link.download = `ticket.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       toast.success("Ticket downloaded successfully!");
+
+      // Refresh the page after successful download
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error("Error downloading ticket:", error);
       toast.error("Failed to download ticket. Please try again.");
@@ -258,9 +263,7 @@ const MyTickets = () => {
               {/* Download Button */}
               <div className="ml-6">
                 <button
-                  onClick={() =>
-                    handleDownloadTicket(ticket.eventId, ticket.ticketNumber)
-                  }
+                  onClick={() => handleDownloadTicket(ticket.eventId)}
                   disabled={
                     !ticket.isFreeEvent && ticket.paymentStatus !== "completed"
                   }

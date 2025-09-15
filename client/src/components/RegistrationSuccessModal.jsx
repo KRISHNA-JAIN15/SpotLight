@@ -8,7 +8,7 @@ const RegistrationSuccessModal = ({ isOpen, onClose, registrationData }) => {
 
   if (!isOpen || !registrationData) return null;
 
-  const { event, ticketDetails, paymentId, ticketNumber } = registrationData;
+  const { event, ticketDetails, paymentId } = registrationData;
 
   const handleDownloadTicket = async () => {
     try {
@@ -29,19 +29,14 @@ const RegistrationSuccessModal = ({ isOpen, onClose, registrationData }) => {
         return;
       }
 
-      // Generate and download ticket
+      // Download existing ticket
       const response = await fetch(
-        `http://localhost:5000/api/tickets/generate`,
+        `http://localhost:5000/api/tickets/download/${event._id}/${userId}`,
         {
-          method: "POST",
+          method: "GET",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            eventId: event._id,
-            userId: userId,
-          }),
         }
       );
 
@@ -56,13 +51,18 @@ const RegistrationSuccessModal = ({ isOpen, onClose, registrationData }) => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ticket-${ticketNumber || "download"}.pdf`;
+      link.download = `ticket.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       toast.success("Ticket downloaded successfully!");
+
+      // Refresh the page after successful download
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error("Error downloading ticket:", error);
       toast.error("Failed to download ticket. Please try again.");

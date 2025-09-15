@@ -24,6 +24,7 @@ const LoginPage = () => {
     isAuthenticated,
     requiresVerification,
     requiresProfileCompletion,
+    user,
   } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const location = useLocation();
@@ -43,7 +44,7 @@ const LoginPage = () => {
       return <Navigate to="/admin" replace />;
     }
 
-    const from = location.state?.from?.pathname || "/";
+    const from = location.state?.from?.pathname || "/events-display";
     return <Navigate to={from} replace />;
   }
 
@@ -69,8 +70,8 @@ const LoginPage = () => {
       } else if (userType === "event_manager") {
         window.location.href = "/";
       } else {
-        // For regular users, use default redirect logic
-        const from = location.state?.from?.pathname || "/";
+        // For regular users, redirect to events page
+        const from = location.state?.from?.pathname || "/events-display";
         window.location.href = from;
       }
     } catch (error) {

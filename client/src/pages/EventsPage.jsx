@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Navigate, Link, useNavigate } from "react-router-dom";
 import {
   MapPin,
   Calendar,
@@ -20,10 +20,11 @@ import {
 import toast from "react-hot-toast";
 import { useAuth } from "../contexts/AuthContext";
 import Navbar from "../components/Navbar";
-import axios from "axios";
+import api from "../services/api";
 
 const EventsPage = () => {
   const { user, isAuthenticated, requiresProfileCompletion } = useAuth();
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -33,6 +34,32 @@ const EventsPage = () => {
   const [locationError, setLocationError] = useState(null);
   const [registrationStatus, setRegistrationStatus] = useState({});
   const [likedEventIds, setLikedEventIds] = useState(new Set());
+
+  useEffect(() => {
+    const getUserLocationAndFetchLiked = async () => {
+      getUserLocation();
+      fetchLikedEventIds();
+    };
+    getUserLocationAndFetchLiked();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (userLocation) {
+      fetchEvents();
+    }
+  }, [userLocation]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (userLocation) {
+      fetchEvents();
+    }
+  }, [selectedCategory, sortBy]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (events.length > 0) {
+      fetchRegistrationStatuses();
+    }
+  }, [events]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Redirect if not authenticated or profile not completed
   if (!isAuthenticated) {
@@ -47,28 +74,6 @@ const EventsPage = () => {
   if (user?.type === "admin") {
     return <Navigate to="/admin/venues" replace />;
   }
-
-  if (user?.type === "event_manager") {
-    return <Navigate to="/event-manager/dashboard" replace />;
-  }
-
-  useEffect(() => {
-    getUserLocation();
-    fetchLikedEventIds(); // Fetch liked events to know heart status
-    // Don't fetch events here - wait for userLocation to be set
-  }, []);
-
-  useEffect(() => {
-    if (userLocation) {
-      fetchEvents();
-    }
-  }, [selectedCategory, sortBy, userLocation]);
-
-  useEffect(() => {
-    if (events.length > 0) {
-      fetchRegistrationStatuses();
-    }
-  }, [events]);
 
   const getUserLocation = () => {
     setLocationLoading(true);
@@ -107,30 +112,28 @@ const EventsPage = () => {
       if (userLocation) {
         params.append("latitude", userLocation.latitude);
         params.append("longitude", userLocation.longitude);
-        // Remove hardcoded radius to let backend use user's profile preference
       }
 
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:5000"
-        }/api/events?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.get(`/events?${params.toString()}`);
 
-      if (response.data.success) {
-        const eventsData = response.data.data.events || response.data.data;
+      if (response.success) {
+        const eventsData = response.data.events || response.data;
         setEvents(Array.isArray(eventsData) ? eventsData : []);
       } else {
         setEvents([]);
       }
+
+      if (response.data.length === 0) {
+        setLocationError(
+          "No events found in your preferred area. Try updating your location preferences in your profile."
+        );
+      } else {
+        setLocationError(null);
+      }
     } catch (error) {
       console.error("Error fetching events:", error);
-      toast.error("Failed to fetch events");
-      setEvents([]); // Ensure it's always an array
+      setLocationError("Failed to fetch events. Please try again later.");
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -138,21 +141,10 @@ const EventsPage = () => {
 
   const fetchLikedEventIds = async () => {
     try {
-      const response = await axios.get(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:5000"
-        }/api/events/my-liked`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.get(`/events/my-liked`);
 
-      if (response.data.success) {
-        const likedData = Array.isArray(response.data.data)
-          ? response.data.data
-          : [];
+      if (response.success) {
+        const likedData = Array.isArray(response.data) ? response.data : [];
         setLikedEventIds(new Set(likedData.map((event) => event._id)));
       }
     } catch (error) {
@@ -170,18 +162,11 @@ const EventsPage = () => {
       await Promise.all(
         events.map(async (event) => {
           try {
-            const response = await axios.get(
-              `${
-                import.meta.env.VITE_API_URL || "http://localhost:5000"
-              }/api/events/${event._id}/registration-status`,
-              {
-                headers: {
-                  Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-              }
+            const response = await api.get(
+              `/events/${event._id}/registration-status`
             );
-            if (response.data.success) {
-              statuses[event._id] = response.data.data;
+            if (response.success) {
+              statuses[event._id] = response.data;
             }
           } catch (error) {
             console.error(
@@ -197,27 +182,71 @@ const EventsPage = () => {
     }
   };
 
-  const handleRegisterForEvent = async (eventId) => {
-    try {
-      const response = await axios.post(
-        `/events/${eventId}/register`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+  const handleRegisterForEvent = async (event) => {
+    console.log("🎫 Registration clicked for event:", event.title);
+    console.log("🔍 Event pricing:", event.pricing);
+    console.log("💰 Event pricing isFree:", event.pricing?.isFree);
+    console.log("🎟️ Event tickets:", event.pricing?.tickets);
 
-      if (response.data.success) {
-        toast.success("Successfully registered for event!");
+    // Check if event is paid - redirect to event detail page for payment flow
+    if (event.pricing && !event.pricing.isFree) {
+      console.log(
+        "💳 Event is paid, navigating to event detail page for payment"
+      );
+      navigate(`/events/${event._id}`);
+      return;
+    }
+
+    // Check if event has tickets with prices > 0 (alternative check)
+    if (event.pricing?.tickets && event.pricing.tickets.length > 0) {
+      const hasPaidTickets = event.pricing.tickets.some(
+        (ticket) => ticket.price > 0
+      );
+      if (hasPaidTickets) {
+        console.log(
+          "💳 Event has paid tickets, navigating to event detail page"
+        );
+        navigate(`/events/${event._id}`);
+        return;
+      }
+    }
+
+    try {
+      console.log("✅ Attempting direct registration for free event");
+      // For free events, try direct registration
+      const response = await api.post(`/events/${event._id}/register`, {});
+      console.log("📝 Registration response:", response);
+
+      if (response.success) {
+        toast.success("Successfully registered for the free event!");
         fetchRegistrationStatuses();
+      } else {
+        console.log("❌ Registration failed - response not successful");
+        toast.error("Registration failed. Please try again.");
       }
     } catch (error) {
-      console.error("Registration error:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to register for event"
-      );
+      console.error("❌ Registration error:", error);
+
+      // The API interceptor returns the error response data directly
+      // Check for requiresPayment flag in multiple possible locations
+      const requiresPayment =
+        error.requiresPayment ||
+        error?.data?.requiresPayment ||
+        error?.response?.data?.requiresPayment;
+
+      if (requiresPayment) {
+        console.log(
+          "💳 Backend confirmed payment required, navigating to event detail page"
+        );
+        // Navigate to event detail page for payment
+        navigate(`/events/${event._id}`);
+      } else {
+        const errorMessage =
+          error.message ||
+          error?.data?.message ||
+          "Failed to register for event";
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -234,17 +263,7 @@ const EventsPage = () => {
       }
       setLikedEventIds(newLikedEventIds);
 
-      const response = await axios.post(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:5000"
-        }/api/events/${eventId}/toggle-like`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await api.post(`/events/${eventId}/toggle-like`, {});
 
       if (response.data.success) {
         toast.success(response.data.message);
@@ -447,7 +466,7 @@ const EventsPage = () => {
             <div className="flex items-center space-x-2">
               {!isRegistered && !isEventFull(event) && (
                 <button
-                  onClick={() => handleRegisterForEvent(event._id)}
+                  onClick={() => handleRegisterForEvent(event)}
                   className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors flex items-center"
                 >
                   <UserPlus className="h-3 w-3 mr-1" />
@@ -498,12 +517,6 @@ const EventsPage = () => {
                 Find exciting events happening near you
               </p>
             </div>
-            <Link
-              to="/dashboard"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Back to Dashboard
-            </Link>
           </div>
         </div>
       </header>

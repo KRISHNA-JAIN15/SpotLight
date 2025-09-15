@@ -89,9 +89,15 @@ const generateTicket = async (req, res) => {
           day: "numeric",
         }
       ),
-      eventTime: event.dateTime.startTime || "TBD",
+      eventTime:
+        event.dateTime.startTime ||
+        new Date(event.dateTime.startDate).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }),
       eventLocation: `${event.venue.name}, ${event.venue.address.city}`,
-      attendeeName: `${user.firstName} ${user.lastName}`,
+      attendeeName: user.name,
       attendeeEmail: user.email,
       ticketType: attendeeRecord.ticketType || "General",
       ticketNumber,
@@ -111,10 +117,7 @@ const generateTicket = async (req, res) => {
 
     // Send PDF as response
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="ticket-${ticketNumber}.pdf"`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="ticket.pdf"`);
     res.setHeader("Content-Length", pdfBuffer.length);
     res.send(pdfBuffer);
   } catch (error) {
@@ -216,9 +219,15 @@ const downloadTicket = async (req, res) => {
           day: "numeric",
         }
       ),
-      eventTime: event.dateTime.startTime || "TBD",
+      eventTime:
+        event.dateTime.startTime ||
+        new Date(event.dateTime.startDate).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        }),
       eventLocation: `${event.venue.name}, ${event.venue.address.city}`,
-      attendeeName: `${user.firstName} ${user.lastName}`,
+      attendeeName: user.name,
       attendeeEmail: user.email,
       ticketType: attendeeRecord.ticketType || "General",
       ticketNumber: ticketNumber,
@@ -230,10 +239,7 @@ const downloadTicket = async (req, res) => {
 
     // Send PDF as response
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="ticket-${ticketNumber}.pdf"`
-    );
+    res.setHeader("Content-Disposition", `attachment; filename="ticket.pdf"`);
     res.setHeader("Content-Length", pdfBuffer.length);
     res.send(pdfBuffer);
   } catch (error) {
@@ -388,7 +394,7 @@ const verifyTicket = async (req, res) => {
         ticketNumber: attendeeRecord.ticketNumber,
         eventTitle: event.title,
         eventDate: event.dateTime.startDate,
-        attendeeName: `${user.firstName} ${user.lastName}`,
+        attendeeName: user.name,
         attendeeEmail: user.email,
         ticketType: attendeeRecord.ticketType,
         checkInStatus: attendeeRecord.checkInStatus,

@@ -272,13 +272,18 @@ const EventDetailPage = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ticket-${event.title.replace(/\s+/g, "-")}.pdf`;
+      link.download = `ticket.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
       toast.success("Ticket downloaded successfully!");
+
+      // Refresh the page after successful download
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       console.error("Error downloading ticket:", error);
       toast.error("Failed to download ticket. Please try again.");

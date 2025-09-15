@@ -74,7 +74,7 @@ const categories = [
 ];
 
 const ProfilePage = () => {
-  const { user, _isAuthenticated, updateProfile, isLoading } = useAuth();
+  const { user, isAuthenticated, updateProfile, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedState, setSelectedState] = useState("");
@@ -357,7 +357,7 @@ const ProfilePage = () => {
   };
 
   // Redirect if not authenticated
-  if (!_isAuthenticated) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
@@ -483,12 +483,26 @@ const ProfilePage = () => {
 
         {/* Profile Content */}
         <div className="space-y-8">
-          {/* Financial Profile - Only show for event managers */}
-          {user?.type === "event_manager" && <FinancialProfile />}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div
+            className={`grid grid-cols-1 gap-8 ${
+              user?.type === "event_manager"
+                ? "lg:grid-cols-1"
+                : "lg:grid-cols-3"
+            }`}
+          >
             {/* Main Profile Information */}
-            <div className="lg:col-span-2 space-y-8">
+            <div
+              className={`space-y-8 ${
+                user?.type === "event_manager" ? "" : "lg:col-span-2"
+              }`}
+            >
+              {/* Financial Profile - Only show for event managers */}
+              {user?.type === "event_manager" && (
+                <div className="space-y-6">
+                  <FinancialProfile />
+                </div>
+              )}
+
               {/* Basic Information */}
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">
@@ -853,117 +867,74 @@ const ProfilePage = () => {
 
             {/* Sidebar */}
             <div className="space-y-8">
-              {/* Interests */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                  Interests
-                </h2>
+              {/* Interests - Only show for regular users, not event managers */}
+              {user?.type !== "event_manager" && (
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-6">
+                    Interests
+                  </h2>
 
-                {isEditing ? (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Select the types of events you're interested in:
-                    </p>
-                    <div className="grid grid-cols-1 gap-3">
-                      {categories.map((category) => (
-                        <button
-                          key={category.id}
-                          type="button"
-                          onClick={() => handleCategoryToggle(category.id)}
-                          className={`p-3 rounded-lg border-2 text-left transition-colors ${
-                            selectedCategories.includes(category.id)
-                              ? "border-blue-500 bg-blue-50 text-blue-700"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <span className="text-lg mr-3">
-                              {category.icon}
-                            </span>
-                            <span className="text-sm font-medium">
-                              {category.label}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    {user?.preferences?.categories?.length > 0 ? (
-                      <div className="space-y-2">
-                        {user.preferences.categories.map((categoryId) => {
-                          const category = categories.find(
-                            (c) => c.id === categoryId
-                          );
-                          return category ? (
-                            <div
-                              key={categoryId}
-                              className="flex items-center p-2 bg-blue-50 rounded-lg"
-                            >
+                  {isEditing ? (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Select the types of events you're interested in:
+                      </p>
+                      <div className="grid grid-cols-1 gap-3">
+                        {categories.map((category) => (
+                          <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => handleCategoryToggle(category.id)}
+                            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                              selectedCategories.includes(category.id)
+                                ? "border-blue-500 bg-blue-50 text-blue-700"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                          >
+                            <div className="flex items-center">
                               <span className="text-lg mr-3">
                                 {category.icon}
                               </span>
-                              <span className="text-sm font-medium text-blue-700">
+                              <span className="text-sm font-medium">
                                 {category.label}
                               </span>
                             </div>
-                          ) : null;
-                        })}
+                          </button>
+                        ))}
                       </div>
-                    ) : (
-                      <p className="text-gray-500 text-sm">
-                        No interests selected
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Stats */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">
-                  Activity
-                </h2>
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Calendar className="h-5 w-5 text-blue-600 mr-3" />
-                      <span className="text-sm text-gray-600">
-                        Events Attended
-                      </span>
                     </div>
-                    <span className="font-semibold text-gray-900">0</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Heart className="h-5 w-5 text-red-600 mr-3" />
-                      <span className="text-sm text-gray-600">
-                        Liked Events
-                      </span>
+                  ) : (
+                    <div>
+                      {user?.preferences?.categories?.length > 0 ? (
+                        <div className="space-y-2">
+                          {user.preferences.categories.map((categoryId) => {
+                            const category = categories.find(
+                              (c) => c.id === categoryId
+                            );
+                            return category ? (
+                              <div
+                                key={categoryId}
+                                className="flex items-center p-2 bg-blue-50 rounded-lg"
+                              >
+                                <span className="text-lg mr-3">
+                                  {category.icon}
+                                </span>
+                                <span className="text-sm font-medium text-blue-700">
+                                  {category.label}
+                                </span>
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm">
+                          No interests selected
+                        </p>
+                      )}
                     </div>
-                    <span className="font-semibold text-gray-900">0</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Users className="h-5 w-5 text-green-600 mr-3" />
-                      <span className="text-sm text-gray-600">Following</span>
-                    </div>
-                    <span className="font-semibold text-gray-900">0</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <Star className="h-5 w-5 text-yellow-600 mr-3" />
-                      <span className="text-sm text-gray-600">Reviews</span>
-                    </div>
-                    <span className="font-semibold text-gray-900">0</span>
-                  </div>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
