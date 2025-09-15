@@ -1,10 +1,5 @@
 # 🎯 Spotlight - Event Management Platform
 
-[![React](https://img.shields.io/badge/React-19.1.1-blue.svg)](https://reactjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-Express-green.svg)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/Database-MongoDB-success.svg)](https://mongodb.com/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1.12-38B2AC.svg)](https://tailwindcss.com/)
-
 A modern, full-stack event management platform that connects event organizers with attendees, featuring real-time payments, venue management, and comprehensive financial tracking.
 
 ## 🌟 Features
@@ -183,36 +178,6 @@ A modern, full-stack event management platform that connects event organizers wi
 3. **User Management** - Monitor and manage user accounts
 4. **System Oversight** - Platform maintenance and monitoring
 
-## 🏗 Project Structure
-
-```
-spotlight/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── contexts/       # React context providers
-│   │   ├── pages/         # Page components
-│   │   ├── services/      # API service layer
-│   │   └── utils/         # Utility functions
-│   └── public/            # Static assets
-├── server/                # Node.js backend
-│   ├── controllers/       # Route controllers
-│   ├── middleware/        # Express middleware
-│   ├── models/           # MongoDB models
-│   ├── routes/           # API routes
-│   └── utils/            # Backend utilities
-└── docs/                 # Documentation
-```
-
-## 🔧 Key Components
-
-### Frontend Components
-- **Navbar**: Sticky navigation with user-specific menus
-- **EventCard**: Reusable event display component
-- **FinancialProfile**: Event manager financial dashboard
-- **TicketModal**: Payment and ticket selection interface
-- **ReviewSystem**: Event rating and review functionality
-
 ### Backend Models
 - **User**: User authentication and profile management
 - **Event**: Event creation and management
@@ -220,26 +185,6 @@ spotlight/
 - **Registration**: Event registration tracking
 - **Payment**: Financial transaction management
 
-## 🚀 Deployment
-
-### Frontend (Vercel/Netlify)
-```bash
-cd client
-npm run build
-# Deploy dist/ folder
-```
-
-### Backend (Heroku/Railway)
-```bash
-cd server
-# Set environment variables
-# Deploy with your preferred platform
-```
-
-### Database (MongoDB Atlas)
-- Create MongoDB Atlas cluster
-- Update connection string in environment variables
-- Set up database indexes for performance
 
 ## 🔐 Security Features
 
@@ -249,19 +194,6 @@ cd server
 - **Rate Limiting**: Prevent API abuse
 - **Helmet**: Security headers protection
 - **CORS**: Cross-origin resource sharing configuration
-
-## 🎨 Design System
-
-### Colors
-- **Primary**: Blue (#3B82F6) to Purple (#8B5CF6) gradient
-- **Success**: Green (#10B981)
-- **Warning**: Yellow (#F59E0B)
-- **Error**: Red (#EF4444)
-- **Neutral**: Gray scale (#6B7280, #9CA3AF, #D1D5DB)
-
-### Typography
-- **Font**: System font stack with Tailwind CSS defaults
-- **Scale**: Responsive typography using Tailwind's text utilities
 
 ## 📊 API Endpoints
 
@@ -286,35 +218,6 @@ cd server
 - `GET /api/venues` - List venues
 - `POST /api/venues` - Create venue
 - `PUT /api/admin/venues/:id/approve` - Approve venue
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the ISC License.
-
-## 👨‍💻 Author
-
-**Krishna Jain**
-- GitHub: [@KRISHNA-JAIN15](https://github.com/KRISHNA-JAIN15)
-
-## 🙏 Acknowledgments
-
-- React team for the amazing framework
-- Tailwind CSS for the utility-first CSS framework
-- Lucide React for beautiful icons
-- All open-source contributors
-
-## 📞 Support
-
-For support, email your-email@example.com or create an issue in the repository.
-
 ---
 
 ⭐ **Star this repository if it helped you!**
