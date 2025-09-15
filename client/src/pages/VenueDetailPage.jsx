@@ -22,6 +22,7 @@ import {
 import axios from "axios";
 import toast from "react-hot-toast";
 import Navbar from "../components/Navbar";
+import VenueReviews from "../components/reviews/VenueReviews";
 
 const VenueDetailPage = () => {
   const { id } = useParams();
@@ -32,6 +33,7 @@ const VenueDetailPage = () => {
 
   useEffect(() => {
     fetchVenueDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchVenueDetails = async () => {
@@ -271,6 +273,11 @@ const VenueDetailPage = () => {
                 <p className="text-red-700">{venue.rejectionReason}</p>
               </div>
             )}
+
+            {/* Venue Reviews */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <VenueReviews venueId={venue._id} venueName={venue.name} />
+            </div>
           </div>
 
           {/* Sidebar */}

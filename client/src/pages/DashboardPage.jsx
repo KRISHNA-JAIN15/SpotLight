@@ -31,8 +31,12 @@ import RegistrationSuccessModal from "../components/RegistrationSuccessModal";
 import axios from "axios";
 
 const DashboardPage = () => {
-  const { user, isAuthenticated, requiresProfileCompletion, logout } =
-    useAuth();
+  const {
+    user,
+    isAuthenticated,
+    requiresProfileCompletion,
+    logout: _logout,
+  } = useAuth();
 
   // Tab states
   const [activeTab, setActiveTab] = useState("discover");
@@ -63,6 +67,33 @@ const DashboardPage = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [registrationData, setRegistrationData] = useState(null);
 
+  useEffect(() => {
+    getUserLocation();
+    fetchLikedEventIds(); // Fetch liked events to know heart status
+    // Don't fetch discover events here - wait for userLocation to be set
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (userLocation) {
+      fetchDiscoverEvents();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, sortBy, userLocation]);
+
+  useEffect(() => {
+    if (discoverEvents.length > 0) {
+      fetchRegistrationStatuses();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [discoverEvents]);
+
+  useEffect(() => {
+    if (activeTab !== "discover") {
+      fetchTabData(activeTab);
+    }
+  }, [activeTab]);
+
   // Redirect if not authenticated or profile not completed
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -80,30 +111,6 @@ const DashboardPage = () => {
   if (user?.type === "event_manager") {
     return <Navigate to="/event-manager/dashboard" replace />;
   }
-
-  useEffect(() => {
-    getUserLocation();
-    fetchLikedEventIds(); // Fetch liked events to know heart status
-    // Don't fetch discover events here - wait for userLocation to be set
-  }, []);
-
-  useEffect(() => {
-    if (userLocation) {
-      fetchDiscoverEvents();
-    }
-  }, [selectedCategory, sortBy, userLocation]);
-
-  useEffect(() => {
-    if (discoverEvents.length > 0) {
-      fetchRegistrationStatuses();
-    }
-  }, [discoverEvents]);
-
-  useEffect(() => {
-    if (activeTab !== "discover") {
-      fetchTabData(activeTab);
-    }
-  }, [activeTab]);
 
   const getUserLocation = () => {
     setLocationLoading(true);

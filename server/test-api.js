@@ -1,16 +1,27 @@
-// Test file for Spotlight Events Authentication API
-// Use this with a tool like Postman or Insomnia to test the endpoints
+// Test to see what's being imported from reviewController
+console.log("Testing review controller imports...");
 
-const API_BASE_URL = "http://localhost:5000/api";
+try {
+  const controller = require("./controllers/reviewController");
+  console.log("Controller object:", Object.keys(controller));
 
-// Test Data
-const testUser = {
-  name: "John Doe",
-  email: "john.doe@example.com",
-  password: "Password123",
-  type: "user",
-  phone: "+1234567890",
-};
+  const { createReview, getEventReviews, getVenueTopReviews } = controller;
+
+  console.log("createReview:", typeof createReview, createReview ? "✅" : "❌");
+  console.log(
+    "getEventReviews:",
+    typeof getEventReviews,
+    getEventReviews ? "✅" : "❌"
+  );
+  console.log(
+    "getVenueTopReviews:",
+    typeof getVenueTopReviews,
+    getVenueTopReviews ? "✅" : "❌"
+  );
+} catch (error) {
+  console.error("Error importing controller:", error.message);
+  console.error("Stack:", error.stack);
+}
 
 // 1. Health Check
 console.log("=== HEALTH CHECK ===");

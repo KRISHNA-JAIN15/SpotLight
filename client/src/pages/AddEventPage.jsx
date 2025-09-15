@@ -93,7 +93,7 @@ const AddEventPage = () => {
       console.log("Pricing data being sent:", transformedData.pricing);
       console.log("Tickets in pricing:", transformedData.pricing?.tickets);
 
-      const response = await axios.post(
+      const _response = await axios.post(
         `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/events`,
         transformedData,
         {

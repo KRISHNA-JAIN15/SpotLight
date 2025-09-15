@@ -74,15 +74,15 @@ const categories = [
 ];
 
 const ProfilePage = () => {
-  const { user, isAuthenticated, updateProfile, isLoading } = useAuth();
+  const { user, _isAuthenticated, updateProfile, isLoading } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedState, setSelectedState] = useState("");
   const [availableCities, setAvailableCities] = useState([]);
   const [locationErrors, setLocationErrors] = useState({});
-  const [profilePicture, setProfilePicture] = useState(null);
+  const [_profilePicture, setProfilePicture] = useState(null);
   const [profilePicturePreview, setProfilePicturePreview] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [_refreshing, setRefreshing] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
   const [coordinates, setCoordinates] = useState(null);
 
@@ -100,16 +100,11 @@ const ProfilePage = () => {
     mode: "onBlur",
   });
 
-  // Redirect if not authenticated
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
   // Watch for state changes to update available cities
   const watchedState = watch("location.state");
 
   // Add a function to refresh user data
-  const refreshUserData = async () => {
+  const _refreshUserData = async () => {
     try {
       setRefreshing(true);
       const response = await axios.get("/auth/me", {
@@ -360,6 +355,11 @@ const ProfilePage = () => {
       day: "numeric",
     });
   };
+
+  // Redirect if not authenticated
+  if (!_isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

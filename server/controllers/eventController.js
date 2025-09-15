@@ -645,8 +645,7 @@ const getEventById = async (req, res) => {
       .populate(
         "venue",
         "name description address contact capacity amenities images"
-      )
-      .populate("reviews.user", "name profilePicture");
+      );
 
     if (!event) {
       return res.status(404).json({

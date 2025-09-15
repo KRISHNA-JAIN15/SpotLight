@@ -27,6 +27,7 @@ import { useAuth } from "../contexts/AuthContext";
 import TicketSelectionModal from "../components/TicketSelectionModal";
 import PaymentModal from "../components/PaymentModal";
 import RegistrationSuccessModal from "../components/RegistrationSuccessModal";
+import ReviewList from "../components/reviews/ReviewList";
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -629,6 +630,20 @@ const EventDetailPage = () => {
                 </div>
               </div>
             )}
+
+            {/* Reviews Section */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <ReviewList
+                eventId={event._id}
+                currentUserId={user?.id || user?._id || user?.userId}
+                eventStatus={event.status}
+                userHasAttended={
+                  registrationStatus?.isRegistered &&
+                  registrationStatus?.registration?.paymentStatus ===
+                    "completed"
+                }
+              />
+            </div>
           </div>
 
           {/* Sidebar */}

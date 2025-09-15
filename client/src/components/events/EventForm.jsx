@@ -138,7 +138,7 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
     } else if (eventType === "free") {
       setTicketTiers([]);
     }
-  }, [eventType]);
+  }, [eventType, ticketTiers.length]);
 
   // Populate form with initial data when editing
   useEffect(() => {
@@ -247,7 +247,7 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
         }
       });
     }
-  }, [initialData, setValue]);
+  }, [initialData, setValue, eventImages]);
 
   const fetchApprovedVenues = async () => {
     try {
@@ -504,7 +504,7 @@ const EventForm = ({ onSubmit, initialData = null, isLoading = false }) => {
     onSubmit(eventFormData);
   };
 
-  const formatDateForInput = (date) => {
+  const _formatDateForInput = (date) => {
     if (!date) return "";
     const d = new Date(date);
     return d.toISOString().slice(0, 16);

@@ -370,7 +370,7 @@ const AdminDashboard = () => {
             Event Status
           </h2>
           <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-purple-600">
                   {stats.eventBreakdown.total?.toLocaleString() || 0}
@@ -382,12 +382,6 @@ const AdminDashboard = () => {
                   {stats.eventBreakdown.upcoming?.toLocaleString() || 0}
                 </div>
                 <div className="text-sm text-gray-600">Upcoming</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-blue-600">
-                  {stats.eventBreakdown.active?.toLocaleString() || 0}
-                </div>
-                <div className="text-sm text-gray-600">Currently Active</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-gray-600">

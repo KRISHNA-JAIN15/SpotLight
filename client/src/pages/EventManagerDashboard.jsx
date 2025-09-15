@@ -76,8 +76,10 @@ const EventManagerDashboard = () => {
       const eventStats = {
         total: events.length,
         active: events.filter((e) => e.status === "active").length,
-        upcoming: events.filter((e) => new Date(e.startDate) > new Date())
-          .length,
+        upcoming: events.filter((e) => {
+          const startDate = e.dateTime?.startDate || e.startDate;
+          return startDate && new Date(startDate) > new Date();
+        }).length,
       };
 
       const totalAttendees = events.reduce(
@@ -308,7 +310,11 @@ const EventManagerDashboard = () => {
                                   {venue.name}
                                 </h3>
                                 <p className="text-sm text-gray-500">
-                                  {venue.city}, {venue.state}
+                                  {venue.address?.fullAddress ||
+                                    `${venue.address?.street || ""} ${
+                                      venue.address?.city || ""
+                                    }, ${venue.address?.state || ""}`.trim() ||
+                                    `${venue.city || ""}, ${venue.state || ""}`}
                                 </p>
                               </div>
                               <div className="flex items-center space-x-2">
@@ -362,9 +368,17 @@ const EventManagerDashboard = () => {
                                   {event.title}
                                 </h3>
                                 <p className="text-sm text-gray-500">
-                                  {new Date(
-                                    event.startDate
-                                  ).toLocaleDateString()}
+                                  {event.dateTime?.startDate &&
+                                  !isNaN(new Date(event.dateTime.startDate))
+                                    ? new Date(
+                                        event.dateTime.startDate
+                                      ).toLocaleDateString()
+                                    : event.startDate &&
+                                      !isNaN(new Date(event.startDate))
+                                    ? new Date(
+                                        event.startDate
+                                      ).toLocaleDateString()
+                                    : "Date not set"}
                                 </p>
                               </div>
                             </div>

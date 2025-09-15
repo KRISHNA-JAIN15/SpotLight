@@ -16,7 +16,7 @@ import axios from "axios";
 import { useAuth } from "../../contexts/AuthContext";
 
 const VenueList = () => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

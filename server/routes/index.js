@@ -10,6 +10,7 @@ const adminRoutes = require("./admin");
 const paymentRoutes = require("./paymentRoutes");
 const ticketRoutes = require("./ticketRoutes");
 const revenueRoutes = require("./revenueRoutes");
+const reviewRoutes = require("./reviewRoutes");
 
 // Mount routes
 router.use("/auth", authRoutes);
@@ -20,6 +21,7 @@ router.use("/admin", adminRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/tickets", ticketRoutes);
 router.use("/revenue", revenueRoutes);
+router.use("/reviews", reviewRoutes);
 
 // Health check route
 router.get("/health", (req, res) => {
@@ -45,6 +47,7 @@ router.get("/", (req, res) => {
       payments: "/api/payments",
       tickets: "/api/tickets",
       revenue: "/api/revenue",
+      reviews: "/api/reviews",
       health: "/api/health",
     },
     authFlow: {

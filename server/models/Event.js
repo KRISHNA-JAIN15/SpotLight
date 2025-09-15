@@ -228,34 +228,17 @@ const eventSchema = new mongoose.Schema(
         default: 0,
       },
     },
-    reviews: [
-      {
-        user: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-        rating: {
-          type: Number,
-          required: true,
-          min: 1,
-          max: 5,
-        },
-        comment: {
-          type: String,
-          maxlength: 500,
-        },
-        images: [String], // URLs to review images
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-        isVerified: {
-          type: Boolean,
-          default: false,
-        },
-      },
-    ],
+    // Reviews are now handled by separate Review model
+    reviewCount: {
+      type: Number,
+      default: 0,
+    },
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
     socialMedia: {
       hashtags: [String],
       socialLinks: {
@@ -348,16 +331,15 @@ eventSchema.methods.updateStatus = function () {
   return this.save();
 };
 
-// Method to calculate average rating
-eventSchema.methods.calculateAverageRating = function () {
-  if (this.reviews.length === 0) {
-    this.ratings.average = 0;
-    this.ratings.count = 0;
-  } else {
-    const sum = this.reviews.reduce((acc, review) => acc + review.rating, 0);
-    this.ratings.average = Math.round((sum / this.reviews.length) * 10) / 10;
-    this.ratings.count = this.reviews.length;
-  }
+// Method to update average rating from separate Review collection
+eventSchema.methods.updateRating = async function (rating, reviewCount) {
+  this.averageRating = rating;
+  this.reviewCount = reviewCount;
+
+  // Also update the legacy ratings field for backward compatibility
+  this.ratings.average = rating;
+  this.ratings.count = reviewCount;
+
   return this.save();
 };
 

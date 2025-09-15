@@ -19,7 +19,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../../contexts/AuthContext";
 
 const EventList = () => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
