@@ -1,20 +1,14 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useState } from "react";
 import axios from "axios";
 
-// Create auth context
 const AuthContext = createContext();
 
-// API base URL
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
-
-// Configure axios
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 axios.defaults.baseURL = API_BASE_URL;
 
-// Initial state
 const initialState = {
   user: null,
-  pendingEmail: localStorage.getItem("pendingEmail") || null, // Store email for unverified users
+  pendingEmail: localStorage.getItem("pendingEmail") || null,
   token: localStorage.getItem("token"),
   isAuthenticated: false,
   isLoading: false,
@@ -23,7 +17,6 @@ const initialState = {
   error: null,
 };
 
-// Action types
 const ActionTypes = {
   SET_LOADING: "SET_LOADING",
   SET_ERROR: "SET_ERROR",
@@ -37,7 +30,6 @@ const ActionTypes = {
   SET_PENDING_EMAIL: "SET_PENDING_EMAIL",
 };
 
-// Auth reducer
 const authReducer = (state, action) => {
   switch (action.type) {
     case ActionTypes.SET_LOADING:
@@ -60,7 +52,7 @@ const authReducer = (state, action) => {
         isLoading: false,
         error: null,
         requiresVerification: false,
-        pendingEmail: null, // Clear pending email on successful login
+        pendingEmail: null,
       };
 
     case ActionTypes.LOGOUT:
@@ -70,11 +62,6 @@ const authReducer = (state, action) => {
       };
 
     case ActionTypes.SET_USER:
-      console.log("SET_USER action - user:", action.payload);
-      console.log(
-        "SET_USER action - requiresProfileCompletion:",
-        !action.payload.isProfileCompleted
-      );
       return {
         ...state,
         user: action.payload,
@@ -117,11 +104,10 @@ const authReducer = (state, action) => {
   }
 };
 
-// Auth provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const [loadingAuth, setLoadingAuth] = useState(true); // NEW STATE for global auth loading
 
-  // Set axios authorization header when token changes
   useEffect(() => {
     if (state.token) {
       axios.defaults.headers.common["Authorization"] = `Bearer ${state.token}`;
@@ -132,7 +118,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, [state.token]);
 
-  // Persist pending email to localStorage
   useEffect(() => {
     if (state.pendingEmail) {
       localStorage.setItem("pendingEmail", state.pendingEmail);
@@ -146,42 +131,26 @@ export const AuthProvider = ({ children }) => {
     const loadUser = async () => {
       if (state.token && !state.user) {
         try {
-          dispatch({ type: ActionTypes.SET_LOADING, payload: true });
           const response = await axios.get("/auth/me");
-          console.log("User loaded:", response.data.data.user);
-          console.log(
-            "Profile completed:",
-            response.data.data.user.isProfileCompleted
-          );
-          dispatch({
-            type: ActionTypes.SET_USER,
-            payload: response.data.data.user,
-          });
+          dispatch({ type: ActionTypes.SET_USER, payload: response.data.data.user });
         } catch (error) {
           console.error("Failed to load user:", error);
           dispatch({ type: ActionTypes.LOGOUT });
         }
       }
+      setLoadingAuth(false); // stop loader after attempt
     };
 
     loadUser();
   }, [state.token, state.user]);
 
-  // Auth functions
   const signup = async (userData) => {
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-
-      // Make request without Authorization header since this is a public endpoint
       const response = await axios.post("/auth/signup", userData, {
-        headers: {
-          Authorization: undefined,
-        },
+        headers: { Authorization: undefined },
       });
-      dispatch({
-        type: ActionTypes.SET_PENDING_EMAIL,
-        payload: userData.email,
-      });
+      dispatch({ type: ActionTypes.SET_PENDING_EMAIL, payload: userData.email });
       dispatch({ type: ActionTypes.SET_REQUIRES_VERIFICATION });
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       return response.data;
@@ -196,12 +165,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-
-      // Make request without Authorization header since this is a public endpoint
       const response = await axios.post("/auth/login", credentials, {
-        headers: {
-          Authorization: undefined,
-        },
+        headers: { Authorization: undefined },
       });
 
       dispatch({
@@ -209,8 +174,7 @@ export const AuthProvider = ({ children }) => {
         payload: {
           user: response.data.data.user,
           token: response.data.data.token,
-          requiresProfileCompletion:
-            response.data.data.requiresProfileCompletion,
+          requiresProfileCompletion: response.data.data.requiresProfileCompletion,
         },
       });
 
@@ -218,50 +182,32 @@ export const AuthProvider = ({ children }) => {
       return response.data;
     } catch (error) {
       const errorData = error.response?.data;
-
       if (errorData?.requiresVerification) {
-        dispatch({
-          type: ActionTypes.SET_PENDING_EMAIL,
-          payload: credentials.email,
-        });
+        dispatch({ type: ActionTypes.SET_PENDING_EMAIL, payload: credentials.email });
         dispatch({ type: ActionTypes.SET_REQUIRES_VERIFICATION });
       } else {
         const errorMessage = errorData?.message || "Login failed";
         dispatch({ type: ActionTypes.SET_ERROR, payload: errorMessage });
       }
-
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       throw error;
     }
   };
 
-  const logout = () => {
-    dispatch({ type: ActionTypes.LOGOUT });
-  };
+  const logout = () => dispatch({ type: ActionTypes.LOGOUT });
 
   const verifyEmail = async (code, emailOverride = null) => {
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       const email = emailOverride || state.pendingEmail;
-      if (!email) {
-        throw new Error("No email found for verification");
-      }
-
-      // Make request without Authorization header since this is a public endpoint
-      const response = await axios.post(
-        "/auth/verify-email",
-        { code, email },
-        {
-          headers: {
-            Authorization: undefined,
-          },
-        }
-      );
+      if (!email) throw new Error("No email found for verification");
+      const response = await axios.post("/auth/verify-email", { code, email }, {
+        headers: { Authorization: undefined },
+      });
       dispatch({ type: ActionTypes.CLEAR_ERROR });
       return response.data;
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Email verification failed";
+      const errorMessage = error.response?.data?.message || "Email verification failed";
       dispatch({ type: ActionTypes.SET_ERROR, payload: errorMessage });
       throw error;
     }
@@ -270,23 +216,14 @@ export const AuthProvider = ({ children }) => {
   const resendVerification = async (email) => {
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
-
-      // Make request without Authorization header since this is a public endpoint
-      const response = await axios.post(
-        "/auth/resend-verification",
-        { email },
-        {
-          headers: {
-            Authorization: undefined,
-          },
-        }
-      );
+      const response = await axios.post("/auth/resend-verification", { email }, {
+        headers: { Authorization: undefined },
+      });
       dispatch({ type: ActionTypes.CLEAR_ERROR });
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       return response.data;
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Failed to resend verification email";
+      const errorMessage = error.response?.data?.message || "Failed to resend verification email";
       dispatch({ type: ActionTypes.SET_ERROR, payload: errorMessage });
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       throw error;
@@ -297,51 +234,41 @@ export const AuthProvider = ({ children }) => {
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       const response = await axios.put("/auth/profile", profileData);
-
-      dispatch({
-        type: ActionTypes.PROFILE_UPDATED,
-        payload: {
-          user: response.data.data.user,
-        },
-      });
-
+      dispatch({ type: ActionTypes.PROFILE_UPDATED, payload: { user: response.data.data.user } });
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       return response.data;
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message || "Profile update failed";
+      const errorMessage = error.response?.data?.message || "Profile update failed";
       dispatch({ type: ActionTypes.SET_ERROR, payload: errorMessage });
       dispatch({ type: ActionTypes.SET_LOADING, payload: false });
       throw error;
     }
   };
 
-  const clearError = () => {
-    dispatch({ type: ActionTypes.CLEAR_ERROR });
-  };
-
-  const contextValue = {
-    ...state,
-    signup,
-    login,
-    logout,
-    verifyEmail,
-    resendVerification,
-    updateProfile,
-    clearError,
-  };
+  const clearError = () => dispatch({ type: ActionTypes.CLEAR_ERROR });
 
   return (
-    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+    <AuthContext.Provider
+      value={{
+        ...state,
+        loadingAuth, // <-- expose new state
+        signup,
+        login,
+        logout,
+        verifyEmail,
+        resendVerification,
+        updateProfile,
+        clearError,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
   );
 };
 
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 };
 
