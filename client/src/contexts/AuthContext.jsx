@@ -28,6 +28,7 @@ const ActionTypes = {
   SET_REQUIRES_PROFILE_COMPLETION: "SET_REQUIRES_PROFILE_COMPLETION",
   PROFILE_UPDATED: "PROFILE_UPDATED",
   SET_PENDING_EMAIL: "SET_PENDING_EMAIL",
+  SET_BACKEND_STATUS: "SET_BACKEND_STATUS",
 };
 
 const authReducer = (state, action) => {
@@ -99,6 +100,12 @@ const authReducer = (state, action) => {
         isLoading: false,
       };
 
+    case ActionTypes.SET_BACKEND_STATUS:
+      return {
+        ...state,
+        backendConnected: action.payload,
+      };
+
     default:
       return state;
   }
@@ -106,7 +113,9 @@ const authReducer = (state, action) => {
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
-  const [loadingAuth, setLoadingAuth] = useState(true); // NEW STATE for global auth loading
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [backendHealthy, setBackendHealthy] = useState(false);
+  const [backendError, setBackendError] = useState(null);
 
   useEffect(() => {
     if (state.token) {
@@ -126,25 +135,53 @@ export const AuthProvider = ({ children }) => {
     }
   }, [state.pendingEmail]);
 
-  // Load user on app start if token exists
+  // Health check backend first, then load user
   useEffect(() => {
-    const loadUser = async () => {
-      if (state.token && !state.user) {
-        try {
-          const response = await axios.get("/auth/me");
-          dispatch({ type: ActionTypes.SET_USER, payload: response.data.data.user });
-        } catch (error) {
-          console.error("Failed to load user:", error);
-          dispatch({ type: ActionTypes.LOGOUT });
+    const initializeApp = async () => {
+      try {
+        // First, ping the backend root route
+        console.log('Checking backend health...');
+        await axios.get("/", {
+          timeout: 10000, // 10 second timeout
+        });
+        
+        console.log('Backend is healthy, proceeding with auth check...');
+        setBackendHealthy(true);
+        setBackendError(null);
+
+        // If backend is healthy and we have a token, try to load user
+        if (state.token && !state.user) {
+          try {
+            const response = await axios.get("/auth/me");
+            dispatch({ type: ActionTypes.SET_USER, payload: response.data.data.user });
+          } catch (error) {
+            console.error("Failed to load user:", error);
+            // If token is invalid, clear it
+            if (error.response?.status === 401) {
+              dispatch({ type: ActionTypes.LOGOUT });
+            }
+          }
         }
+      } catch (error) {
+        console.error("Backend health check failed:", error);
+        setBackendHealthy(false);
+        setBackendError(error.message || "Backend connection failed");
+        
+        // You might want to show an error state or retry mechanism
+        // For now, we'll just log the error and not load the user
+      } finally {
+        setLoadingAuth(false);
       }
-      setLoadingAuth(false); // stop loader after attempt
     };
 
-    loadUser();
+    initializeApp();
   }, [state.token, state.user]);
 
   const signup = async (userData) => {
+    if (!backendHealthy) {
+      throw new Error("Backend is not available. Please try again later.");
+    }
+    
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       const response = await axios.post("/auth/signup", userData, {
@@ -163,6 +200,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (credentials) => {
+    if (!backendHealthy) {
+      throw new Error("Backend is not available. Please try again later.");
+    }
+    
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       const response = await axios.post("/auth/login", credentials, {
@@ -197,6 +238,10 @@ export const AuthProvider = ({ children }) => {
   const logout = () => dispatch({ type: ActionTypes.LOGOUT });
 
   const verifyEmail = async (code, emailOverride = null) => {
+    if (!backendHealthy) {
+      throw new Error("Backend is not available. Please try again later.");
+    }
+    
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       const email = emailOverride || state.pendingEmail;
@@ -214,6 +259,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const resendVerification = async (email) => {
+    if (!backendHealthy) {
+      throw new Error("Backend is not available. Please try again later.");
+    }
+    
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       const response = await axios.post("/auth/resend-verification", { email }, {
@@ -231,6 +280,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateProfile = async (profileData) => {
+    if (!backendHealthy) {
+      throw new Error("Backend is not available. Please try again later.");
+    }
+    
     try {
       dispatch({ type: ActionTypes.SET_LOADING, payload: true });
       const response = await axios.put("/auth/profile", profileData);
@@ -245,19 +298,51 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const retryConnection = async () => {
+    setLoadingAuth(true);
+    setBackendError(null);
+    
+    try {
+      await axios.get("/", { timeout: 10000 });
+      setBackendHealthy(true);
+      setBackendError(null);
+      
+      // Try to load user if token exists
+      if (state.token && !state.user) {
+        try {
+          const response = await axios.get("/auth/me");
+          dispatch({ type: ActionTypes.SET_USER, payload: response.data.data.user });
+        } catch (error) {
+          console.error("Failed to load user:", error);
+          if (error.response?.status === 401) {
+            dispatch({ type: ActionTypes.LOGOUT });
+          }
+        }
+      }
+    } catch (error) {
+      setBackendHealthy(false);
+      setBackendError(error.message || "Backend connection failed");
+    } finally {
+      setLoadingAuth(false);
+    }
+  };
+
   const clearError = () => dispatch({ type: ActionTypes.CLEAR_ERROR });
 
   return (
     <AuthContext.Provider
       value={{
         ...state,
-        loadingAuth, // <-- expose new state
+        loadingAuth,
+        backendHealthy,
+        backendError,
         signup,
         login,
         logout,
         verifyEmail,
         resendVerification,
         updateProfile,
+        retryConnection,
         clearError,
       }}
     >
