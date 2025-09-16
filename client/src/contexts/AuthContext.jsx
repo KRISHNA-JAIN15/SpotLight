@@ -142,7 +142,7 @@ export const AuthProvider = ({ children }) => {
         // First, ping the backend root route
         console.log('Checking backend health...');
         await axios.get("/", {
-          timeout: 10000, // 10 second timeout
+          timeout: 150000, 
         });
         
         console.log('Backend is healthy, proceeding with auth check...');
