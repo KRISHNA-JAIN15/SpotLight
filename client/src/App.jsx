@@ -181,7 +181,7 @@ function AppContent() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-900">
         <HashLoader color="#36d7b7" size={80} />
-        <p className="text-white mt-4">Connecting to server...</p>
+{/*         <p className="text-white mt-4">Connecting to server...</p> */}
       </div>
     );
   }
