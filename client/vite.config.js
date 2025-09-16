@@ -8,10 +8,14 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:5000",
+        target: process.env.VITE_API_BASE_URL || "http://localhost:5000",
         changeOrigin: true,
         secure: false,
       },
     },
+  },
+  define: {
+    // Make sure env vars are available in production
+    'process.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL),
   },
 });
